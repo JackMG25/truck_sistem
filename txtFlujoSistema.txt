@@ -1,0 +1,111 @@
+# Sistema de Gestión para Transportista Independiente (Hyundai H100)
+
+## Descripción del negocio
+
+El transportista trabaja de manera independiente utilizando una Hyundai H100.
+
+No compra, vende ni almacena mercadería. Su función es brindar servicios de transporte entre clientes y agencias.
+
+La mercadería puede ser:
+
+* Cajas
+* Sacos
+* Paquetes
+* Bultos de distintos tamaños
+
+La mayoría de clientes se encuentran dentro de un mercado mayorista.
+
+## Forma de trabajo
+
+El transportista no realiza un viaje por cada cliente.
+
+Durante el día agrupa mercadería de varios clientes dentro del mismo camión.
+
+Por ejemplo:
+
+Viaje de envío:
+
+* Cliente A → Agencia Lima
+* Cliente B → Agencia Trujillo
+* Cliente C → Agencia Chiclayo
+
+Todo se transporta en un mismo recorrido.
+
+Posteriormente realiza viajes de recojo:
+
+* Agencia Lima → Cliente A
+* Agencia Trujillo → Cliente B
+* Agencia Chiclayo → Cliente C
+
+Por esta razón, un viaje puede contener múltiples servicios.
+
+## Estructura principal
+
+### Viaje
+
+Representa una salida o recorrido del camión.
+
+Datos:
+
+* Fecha
+* Tipo de viaje (Envío o Recojo)
+* Estado
+* Observaciones
+
+### Servicios
+
+Cada viaje contiene varios servicios.
+
+Datos:
+
+* Cliente
+* Origen
+* Destino
+* Cantidad de bultos
+* Descripción
+* Costo del transporte
+* Costo de flete de agencia
+* Total a cobrar
+* Estado
+
+## Cobro de flete
+
+En algunos casos el transportista adelanta el pago del flete de una agencia.
+
+Ejemplo:
+
+* Transporte: S/ 30
+* Flete agencia: S/ 20
+* Total cliente: S/ 50
+
+El sistema debe registrar ambos montos por separado.
+
+## Gestión de deudas
+
+Cada cliente puede:
+
+* Pagar completo.
+* Pagar parcialmente.
+* Quedar con deuda.
+
+El sistema debe mostrar:
+
+* Total cobrado.
+* Total pendiente.
+* Historial de pagos.
+* Clientes con deuda.
+
+## Dashboard
+
+Mostrar:
+
+* Viajes del día.
+* Servicios pendientes.
+* Servicios entregados.
+* Total cobrado.
+* Total por cobrar.
+* Clientes con deuda.
+
+## Requisito principal
+
+La aplicación debe estar optimizada para celulares y permitir registrar servicios rápidamente mientras el transportista se encuentra trabajando en ruta.

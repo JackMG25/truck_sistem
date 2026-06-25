@@ -46,40 +46,47 @@
                         <span class="hidden rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 sm:inline-flex">{{ $servicios->total() }} registros</span>
                         <button id="clear-filters" type="button" title="Limpiar filtros" class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-4 w-4">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18" />
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 6v12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6" />
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 11v6m4-6v6" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 1 0 3-6.708" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 4v2.8A.2.2 0 0 0 3.2 7H6" />
                             </svg>
                         </button>
                     </div>
                 </div>
 
-                <div class="mt-3 grid gap-2 sm:grid-cols-3">
-                    <div>
-                        <label for="tipo_servicio" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Tipo</label>
-                        <select id="tipo_servicio" name="tipo_servicio" class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                            <option value="">Todos</option>
-                            <option value="ENVIO" @selected(($tipo_servicio ?? '') === 'ENVIO')>ENVIO</option>
-                            <option value="RECOJO" @selected(($tipo_servicio ?? '') === 'RECOJO')>RECOJO</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="estado_pago" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Estado pago</label>
-                        <select id="estado_pago" name="estado_pago" class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                            <option value="">Todos</option>
-                            <option value="PENDIENTE" @selected(($estado_pago ?? '') === 'PENDIENTE')>PENDIENTE</option>
-                            <option value="PARCIAL" @selected(($estado_pago ?? '') === 'PARCIAL')>PARCIAL</option>
-                            <option value="PAGADO" @selected(($estado_pago ?? '') === 'PAGADO')>PAGADO</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Rango fecha</label>
-                        <div class="flex items-center gap-2">
-                            <input type="date" name="start_date" value="{{ $start_date ?? \Illuminate\Support\Carbon::now()->startOfMonth()->format('Y-m-d') }}" class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                            <input type="date" name="end_date" value="{{ $end_date ?? \Illuminate\Support\Carbon::now()->endOfMonth()->format('Y-m-d') }}" class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                <div class="mt-3 grid gap-2">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label for="tipo_servicio" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Tipo</label>
+                            <select id="tipo_servicio" name="tipo_servicio" class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                                <option value="">Todos</option>
+                                <option value="ENVIO" @selected(($tipo_servicio ?? '') === 'ENVIO')>ENVIO</option>
+                                <option value="RECOJO" @selected(($tipo_servicio ?? '') === 'RECOJO')>RECOJO</option>
+                            </select>
                         </div>
+
+                        <div>
+                            <label for="estado_pago" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Pago</label>
+                            <select id="estado_pago" name="estado_pago" class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                                <option value="">Todos</option>
+                                <option value="PENDIENTE" @selected(($estado_pago ?? '') === 'PENDIENTE')>PENDIENTE</option>
+                                <option value="PARCIAL" @selected(($estado_pago ?? '') === 'PARCIAL')>PARCIAL</option>
+                                <option value="PAGADO" @selected(($estado_pago ?? '') === 'PAGADO')>PAGADO</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="date_range_picker" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Rango fecha</label>
+                        <input
+                            id="date_range_picker"
+                            type="text"
+                            data-date-range
+                            autocomplete="off"
+                            value="{{ ($start_date ?? \Illuminate\Support\Carbon::now()->startOfMonth()->format('Y-m-d')) . ' a ' . ($end_date ?? \Illuminate\Support\Carbon::now()->endOfMonth()->format('Y-m-d')) }}"
+                            class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                        >
+                        <input type="hidden" name="start_date" value="{{ $start_date ?? \Illuminate\Support\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                        <input type="hidden" name="end_date" value="{{ $end_date ?? \Illuminate\Support\Carbon::now()->endOfMonth()->format('Y-m-d') }}">
                     </div>
                 </div>
             </form>
@@ -324,6 +331,8 @@
         @endif
     </section>
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         (function(){
@@ -332,6 +341,9 @@
                 const form = document.getElementById('servicios-filters-form');
                 if (!form) return;
                 const input = form.querySelector('input[name="q"]');
+                const startDateInput = form.querySelector('input[name="start_date"]');
+                const endDateInput = form.querySelector('input[name="end_date"]');
+                const dateRangeInput = form.querySelector('[data-date-range]');
                 if (input) {
                     let timer = null;
                     input.addEventListener('input', function(){
@@ -342,12 +354,38 @@
                     });
                 }
 
-                // submit on change for selects and date inputs
-                form.querySelectorAll('select, input[type="date"]').forEach(function(el){
+                // submit on change for selects
+                form.querySelectorAll('select').forEach(function(el){
                     el.addEventListener('change', function(){
                         form.submit();
                     });
                 });
+
+                if (dateRangeInput && typeof flatpickr !== 'undefined') {
+                    flatpickr(dateRangeInput, {
+                        mode: 'range',
+                        dateFormat: 'Y-m-d',
+                        altInput: true,
+                        altFormat: 'd/m/Y',
+                        defaultDate: [
+                            startDateInput ? startDateInput.value : '',
+                            endDateInput ? endDateInput.value : '',
+                        ].filter(Boolean),
+                        locale: {
+                            rangeSeparator: ' a ',
+                        },
+                        onClose: function(selectedDates){
+                            if (selectedDates.length === 2) {
+                                const formatDate = function(date){
+                                    return flatpickr.formatDate(date, 'Y-m-d');
+                                };
+                                if (startDateInput) startDateInput.value = formatDate(selectedDates[0]);
+                                if (endDateInput) endDateInput.value = formatDate(selectedDates[1]);
+                                form.submit();
+                            }
+                        }
+                    });
+                }
 
                 // clear filters button
                 const clearBtn = document.getElementById('clear-filters');

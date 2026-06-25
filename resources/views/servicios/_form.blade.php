@@ -117,7 +117,7 @@
         </div>
 
         <div>
-            <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Estado pago</span>
+            <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">pago</span>
             <div class="flex flex-row items-center gap-2">
                 @foreach (['PENDIENTE' => 'Pendiente', 'PARCIAL' => 'Parcial', 'PAGADO' => 'Pagado'] as $value => $label)
                     <label data-radio-card class="flex cursor-pointer items-center gap-2 rounded-md border px-2 py-2 text-xs font-semibold {{ old('estado_pago', $servicio->estado_pago ?? 'PENDIENTE') === $value ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-slate-200 bg-white text-slate-600' }}">

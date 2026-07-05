@@ -17,7 +17,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('agencias', AgenciaController::class)->except(['show']);
     Route::resource('clientes', ClienteController::class)->except(['show']);
     Route::resource('servicios', ServicioController::class)->except(['show']);
-    Route::post('servicios/{servicio}/pagos-inline', [ServicioController::class, 'storePagoInline'])->name('servicios.pagos-inline');
+    Route::get('servicios/{servicio}/pagos', [ServicioController::class, 'pagos'])->name('servicios.pagos');
+    Route::post('servicios/{servicio}/pagos', [ServicioController::class, 'storePago'])->name('servicios.pagos.store');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

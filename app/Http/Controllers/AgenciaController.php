@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\AgenciaRequest;
 use App\Models\Agencia;
+use App\Support\DashboardCache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -42,6 +43,8 @@ class AgenciaController extends Controller
     {
         Agencia::create($request->validated());
 
+        DashboardCache::forget();
+
         return redirect()
             ->route('agencias.index')
             ->with('success', 'Agencia registrada correctamente.');
@@ -64,6 +67,8 @@ class AgenciaController extends Controller
     public function destroy(Agencia $agencia): RedirectResponse
     {
         $agencia->delete();
+
+        DashboardCache::forget();
 
         return redirect()
             ->route('agencias.index')

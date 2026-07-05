@@ -19,6 +19,9 @@ class ServicioRequest extends FormRequest
             'cliente_nombre_busqueda' => trim((string) $this->input('cliente_nombre_busqueda')),
             'agencia_id' => $this->filled('agencia_id') ? $this->input('agencia_id') : null,
             'agencia_nombre_busqueda' => trim((string) $this->input('agencia_nombre_busqueda')),
+            // Campos vacíos se guardan como 0; el formulario los muestra sin valor por defecto.
+            'costo_transporte' => $this->filled('costo_transporte') ? $this->input('costo_transporte') : 0,
+            'costo_flete' => $this->filled('costo_flete') ? $this->input('costo_flete') : 0,
         ]);
     }
 
@@ -36,7 +39,6 @@ class ServicioRequest extends FormRequest
             'costo_transporte' => ['required', 'numeric', 'min:0'],
             'costo_flete' => ['required', 'numeric', 'min:0'],
             'estado_servicio' => ['required', Rule::in(['PENDIENTE', 'ENTREGADO'])],
-            'estado_pago' => ['required', Rule::in(['PENDIENTE', 'PARCIAL', 'PAGADO'])],
             'fecha_entrega' => ['nullable', 'date', 'after_or_equal:fecha_servicio'],
             'observaciones' => ['nullable', 'string', 'max:1000'],
         ];
@@ -56,7 +58,6 @@ class ServicioRequest extends FormRequest
             'costo_transporte' => 'costo de transporte',
             'costo_flete' => 'costo de flete',
             'estado_servicio' => 'estado del servicio',
-            'estado_pago' => 'estado del pago',
             'fecha_entrega' => 'fecha de entrega',
             'observaciones' => 'observaciones',
         ];

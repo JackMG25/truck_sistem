@@ -13,6 +13,10 @@ class Servicio extends Model
 
     protected $table = 'servicios';
 
+    protected $attributes = [
+        'estado_pago' => 'PENDIENTE',
+    ];
+
     protected $fillable = [
         'cliente_id',
         'agencia_id',
@@ -50,5 +54,28 @@ class Servicio extends Model
     public function pagos(): HasMany
     {
         return $this->hasMany(Pago::class, 'servicio_id');
+    }
+
+    public function getSaldoPendienteAttribute(): float
+    {
+        return max((float) $this->total - $this->resolveTotalPagado(), 0);
+    }
+
+    public function estaCompletamentePagado(): bool
+    {
+        return $this->saldo_pendiente <= 0;
+    }
+
+    protected function resolveTotalPagado(): float
+    {
+        if ($this->total_pagado !== null) {
+            return (float) $this->total_pagado;
+        }
+
+        if ($this->relationLoaded('pagos')) {
+            return (float) $this->pagos->sum('monto');
+        }
+
+        return (float) $this->pagos()->sum('monto');
     }
 }

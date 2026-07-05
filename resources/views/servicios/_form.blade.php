@@ -1,9 +1,9 @@
 @php
     $isEdit = $servicio->exists;
     $fechaServicio = old('fecha_servicio', optional($servicio->fecha_servicio)->format('Y-m-d\TH:i') ?: now()->format('Y-m-d\TH:i'));
-    $costoTransporte = old('costo_transporte', $servicio->costo_transporte !== null ? number_format((float) $servicio->costo_transporte, 2, '.', '') : '0.00');
-    $costoFlete = old('costo_flete', $servicio->costo_flete !== null ? number_format((float) $servicio->costo_flete, 2, '.', '') : '0.00');
-    $totalPreview = (float) $costoTransporte + (float) $costoFlete;
+    $costoTransporte = old('costo_transporte', $servicio->costo_transporte !== null ? number_format((float) $servicio->costo_transporte, 2, '.', '') : '');
+    $costoFlete = old('costo_flete', $servicio->costo_flete !== null ? number_format((float) $servicio->costo_flete, 2, '.', '') : '');
+    $totalPreview = (float) ($costoTransporte !== '' ? $costoTransporte : 0) + (float) ($costoFlete !== '' ? $costoFlete : 0);
     $selectedClienteId = (string) old('cliente_id', $servicio->cliente_id);
     $selectedAgenciaId = (string) old('agencia_id', $servicio->agencia_id);
     $selectedCliente = $clientesOptions->firstWhere('id', $selectedClienteId);
@@ -96,11 +96,19 @@
             @enderror
         </div>
     </div>
-
+    <div class="grid gap-2 lg:grid-cols-1">
+        <div>
+            <label for="descripcion" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Descripción</label>
+            <textarea id="descripcion" name="descripcion" rows="2" class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-200" placeholder="Detalle breve del servicio">{{ old('descripcion', $servicio->descripcion) }}</textarea>
+            @error('descripcion')
+                <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+            @enderror
+        </div>
+    </div>
     <div class="grid gap-2 sm:grid-cols-3">
         <div>
             <label for="costo_transporte" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Transporte</label>
-            <input id="costo_transporte" name="costo_transporte" type="number" min="0" step="0.01" value="{{ $costoTransporte }}" class="js-total-input w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-200" placeholder="0.00">
+            <input id="costo_transporte" name="costo_transporte" type="number" min="0" step="0.01" value="{{ $costoTransporte }}" class="js-total-input w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-200" placeholder="0.00">
             @error('costo_transporte')
                 <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
             @enderror
@@ -108,7 +116,7 @@
 
         <div>
             <label for="costo_flete" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Flete</label>
-            <input id="costo_flete" name="costo_flete" type="number" min="0" step="0.01" value="{{ $costoFlete }}" class="js-total-input w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-200" placeholder="0.00">
+            <input id="costo_flete" name="costo_flete" type="number" min="0" step="0.01" value="{{ $costoFlete }}" class="js-total-input w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-200" placeholder="0.00">
             @error('costo_flete')
                 <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
             @enderror
@@ -123,7 +131,7 @@
         </div>
     </div>
 
-    <div class="grid gap-2 xl:grid-cols-[1fr_1fr_1.2fr]">
+    <div class="grid gap-2 sm:grid-cols-2">
         <div>
             <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Tipo de servicio</span>
             <div class="grid grid-cols-2 gap-2">
@@ -153,32 +161,9 @@
                 <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
             @enderror
         </div>
-
-        <div>
-            <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">pago</span>
-            <div class="flex flex-row items-center gap-2">
-                @foreach (['PENDIENTE' => 'Pendiente', 'PARCIAL' => 'Parcial', 'PAGADO' => 'Pagado'] as $value => $label)
-                    <label data-radio-card class="flex cursor-pointer items-center gap-2 rounded-md border px-2 py-2 text-xs font-semibold {{ old('estado_pago', $servicio->estado_pago ?? 'PENDIENTE') === $value ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-slate-200 bg-white text-slate-600' }}">
-                        <input type="radio" name="estado_pago" value="{{ $value }}" class="h-3.5 w-3.5 border-slate-300 text-sky-600 focus:ring-sky-500" @checked(old('estado_pago', $servicio->estado_pago ?? 'PENDIENTE') === $value)>
-                        <span>{{ $label }}</span>
-                    </label>
-                @endforeach
-            </div>
-            @error('estado_pago')
-                <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
-            @enderror
-        </div>
     </div>
 
-    <div class="grid gap-2 lg:grid-cols-1">
-        <div>
-            <label for="descripcion" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Descripción</label>
-            <textarea id="descripcion" name="descripcion" rows="2" class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-200" placeholder="Detalle breve del servicio">{{ old('descripcion', $servicio->descripcion) }}</textarea>
-            @error('descripcion')
-                <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
-            @enderror
-        </div>
-    </div>
+    
 
     <div class="flex items-center gap-2 pt-1">
         <button type="submit" class="inline-flex flex-1 items-center justify-center rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm shadow-sky-200">
@@ -232,7 +217,7 @@
             });
         }
 
-        ['tipo_servicio', 'estado_servicio', 'estado_pago'].forEach((name) => {
+        ['tipo_servicio', 'estado_servicio'].forEach((name) => {
             document.querySelectorAll(`input[name="${name}"]`).forEach((input) => {
                 input.addEventListener('change', function () {
                     syncRadioCards(name);

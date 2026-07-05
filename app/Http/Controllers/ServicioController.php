@@ -5,10 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ServicioRequest;
 use App\Models\Agencia;
 use App\Models\Cliente;
-use App\Models\Pago;
 use App\Models\Servicio;
+use App\Support\DashboardCache;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
@@ -37,14 +36,18 @@ class ServicioController extends Controller
             ->with([
                 'cliente:id,nombre',
                 'agencia:id,nombre',
-                'pagos' => function ($query) {
-                    $query->latest('fecha_pago');
-                },
             ])
+            ->withSum('pagos as total_pagado', 'monto')
+            ->withCount('pagos')
             ->when($search !== '', function ($query) use ($search) {
+                if (ctype_digit($search)) {
+                    $query->where('id', $search);
+
+                    return;
+                }
+
                 $query->where(function ($q) use ($search) {
-                    $q->where('id', $search)
-                      ->orWhere('descripcion', 'like', "%{$search}%")
+                    $q->where('descripcion', 'like', "%{$search}%")
                       ->orWhereHas('cliente', function ($q2) use ($search) {
                           $q2->where('nombre', 'like', "%{$search}%");
                       })
@@ -66,8 +69,6 @@ class ServicioController extends Controller
 
         return view('servicios.index', [
             'servicios' => $servicios,
-            'clientesOptions' => Cliente::query()->orderBy('nombre')->get(['id', 'nombre']),
-            'agenciasOptions' => Agencia::query()->orderBy('nombre')->get(['id', 'nombre']),
             'search' => $search,
             'tipo_servicio' => $tipoServicio,
             'estado_pago' => $estadoPago,
@@ -86,7 +87,12 @@ class ServicioController extends Controller
 
     public function store(ServicioRequest $request): RedirectResponse
     {
-        Servicio::create($this->payload($request));
+        Servicio::create([
+            ...$this->payload($request),
+            'estado_pago' => 'PENDIENTE',
+        ]);
+
+        DashboardCache::forget();
 
         return redirect()
             ->route('servicios.index')
@@ -105,6 +111,8 @@ class ServicioController extends Controller
     {
         $servicio->update($this->payload($request));
 
+        DashboardCache::forget();
+
         return redirect()
             ->route('servicios.index')
             ->with('success', 'Servicio actualizado correctamente.');
@@ -114,12 +122,30 @@ class ServicioController extends Controller
     {
         $servicio->delete();
 
+        DashboardCache::forget();
+
         return redirect()
             ->route('servicios.index')
             ->with('success', 'Servicio eliminado correctamente.');
     }
 
-    public function storePagoInline(Request $request, Servicio $servicio): JsonResponse
+    public function pagos(Servicio $servicio): View
+    {
+        $servicio->load([
+            'cliente:id,nombre',
+            'agencia:id,nombre',
+            'pagos' => function ($query) {
+                $query->latest('fecha_pago');
+            },
+        ]);
+
+        $totalPagado = (float) $servicio->pagos->sum('monto');
+        $saldoPendiente = max((float) $servicio->total - $totalPagado, 0);
+
+        return view('servicios.pagos', compact('servicio', 'totalPagado', 'saldoPendiente'));
+    }
+
+    public function storePago(Request $request, Servicio $servicio): RedirectResponse
     {
         $data = $request->validate([
             'fecha_pago' => ['required', 'date'],
@@ -133,23 +159,14 @@ class ServicioController extends Controller
             'observacion' => 'observación',
         ]);
 
-        $pago = $servicio->pagos()->create($data);
+        $servicio->pagos()->create($data);
         $this->syncEstadoPago($servicio);
-        $servicio->refresh();
 
-        return response()->json([
-            'message' => 'Pago registrado correctamente.',
-            'pago' => [
-                'id' => $pago->id,
-                'fecha_pago' => optional($pago->fecha_pago)->format('d/m/Y H:i'),
-                'monto' => number_format((float) $pago->monto, 2, '.', ','),
-                'metodo_pago' => $pago->metodo_pago,
-                'observacion' => $pago->observacion,
-            ],
-            'estado_pago' => $servicio->estado_pago,
-            'total_pagado' => number_format((float) $servicio->pagos()->sum('monto'), 2, '.', ','),
-            'saldo' => number_format(max((float) $servicio->total - (float) $servicio->pagos()->sum('monto'), 0), 2, '.', ','),
-        ]);
+        DashboardCache::forget();
+
+        return redirect()
+            ->route('servicios.pagos', $servicio)
+            ->with('success', 'Pago registrado correctamente.');
     }
 
     private function formOptions(): array

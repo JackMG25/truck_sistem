@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ClienteRequest;
 use App\Models\Cliente;
+use App\Support\DashboardCache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -42,6 +43,8 @@ class ClienteController extends Controller
     {
         Cliente::create($request->validated());
 
+        DashboardCache::forget();
+
         return redirect()
             ->route('clientes.index')
             ->with('success', 'Cliente registrado correctamente.');
@@ -64,6 +67,8 @@ class ClienteController extends Controller
     public function destroy(Cliente $cliente): RedirectResponse
     {
         $cliente->delete();
+
+        DashboardCache::forget();
 
         return redirect()
             ->route('clientes.index')

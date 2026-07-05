@@ -143,7 +143,6 @@
             });
         })();
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // SweetAlert2 handler for delete buttons
         (function(){

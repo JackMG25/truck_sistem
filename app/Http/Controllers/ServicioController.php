@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\AgenciaRequest;
-use App\Http\Requests\ClienteRequest;
 use App\Http\Requests\ServicioRequest;
 use App\Models\Agencia;
 use App\Models\Cliente;
@@ -154,28 +152,6 @@ class ServicioController extends Controller
         ]);
     }
 
-    public function storeClienteInline(ClienteRequest $request): JsonResponse
-    {
-        $cliente = Cliente::create($request->validated());
-
-        return response()->json([
-            'id' => $cliente->id,
-            'nombre' => $cliente->nombre,
-            'message' => 'Cliente creado correctamente.',
-        ]);
-    }
-
-    public function storeAgenciaInline(AgenciaRequest $request): JsonResponse
-    {
-        $agencia = Agencia::create($request->validated());
-
-        return response()->json([
-            'id' => $agencia->id,
-            'nombre' => $agencia->nombre,
-            'message' => 'Agencia creada correctamente.',
-        ]);
-    }
-
     private function formOptions(): array
     {
         return [
@@ -187,11 +163,36 @@ class ServicioController extends Controller
     private function payload(ServicioRequest $request): array
     {
         $data = $request->validated();
+        $data['cliente_id'] = $this->resolveClienteId($data);
+        $data['agencia_id'] = $this->resolveAgenciaId($data);
         $data['fecha_servicio'] = $data['fecha_servicio'] ?? Carbon::now();
         $data['fecha_entrega'] = Carbon::now();
         $data['total'] = (float) $data['costo_transporte'] + (float) $data['costo_flete'];
+        unset($data['cliente_nombre_busqueda'], $data['agencia_nombre_busqueda']);
 
         return $data;
+    }
+
+    private function resolveClienteId(array $data): int
+    {
+        if (! empty($data['cliente_id'])) {
+            return (int) $data['cliente_id'];
+        }
+
+        $nombre = trim((string) ($data['cliente_nombre_busqueda'] ?? ''));
+
+        return Cliente::firstOrCreate(['nombre' => $nombre])->id;
+    }
+
+    private function resolveAgenciaId(array $data): int
+    {
+        if (! empty($data['agencia_id'])) {
+            return (int) $data['agencia_id'];
+        }
+
+        $nombre = trim((string) ($data['agencia_nombre_busqueda'] ?? ''));
+
+        return Agencia::firstOrCreate(['nombre' => $nombre])->id;
     }
 
     private function syncEstadoPago(Servicio $servicio): void

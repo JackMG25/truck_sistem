@@ -4,37 +4,75 @@
     $costoTransporte = old('costo_transporte', $servicio->costo_transporte !== null ? number_format((float) $servicio->costo_transporte, 2, '.', '') : '0.00');
     $costoFlete = old('costo_flete', $servicio->costo_flete !== null ? number_format((float) $servicio->costo_flete, 2, '.', '') : '0.00');
     $totalPreview = (float) $costoTransporte + (float) $costoFlete;
+    $selectedClienteId = (string) old('cliente_id', $servicio->cliente_id);
+    $selectedAgenciaId = (string) old('agencia_id', $servicio->agencia_id);
+    $selectedCliente = $clientesOptions->firstWhere('id', $selectedClienteId);
+    $selectedAgencia = $agenciasOptions->firstWhere('id', $selectedAgenciaId);
+    $clienteSearchValue = old('cliente_nombre_busqueda', $selectedCliente?->nombre ?? '');
+    $agenciaSearchValue = old('agencia_nombre_busqueda', $selectedAgencia?->nombre ?? '');
+    $clientesAutocomplete = $clientesOptions->map(fn ($cliente) => [
+        'id' => (string) $cliente->id,
+        'name' => $cliente->nombre,
+    ])->values();
+    $agenciasAutocomplete = $agenciasOptions->map(fn ($agencia) => [
+        'id' => (string) $agencia->id,
+        'name' => $agencia->nombre,
+    ])->values();
 @endphp
 
 <div class="space-y-2.5">
     <div class="grid gap-2 lg:grid-cols-2">
         <div>
-            <div class="mb-1 flex items-center justify-between gap-2">
-                <label for="cliente_id" class="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Cliente</label>
-                <button type="button" class="inline-flex items-center rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-semibold text-sky-700 hover:bg-sky-100" data-open-modal="cliente-modal">+ Nuevo</button>
+            <label for="cliente_search" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Cliente</label>
+            <div class="relative" data-autocomplete-root="cliente">
+                <input type="hidden" id="cliente_id" name="cliente_id" value="{{ $selectedClienteId }}">
+                <input
+                    id="cliente_search"
+                    name="cliente_nombre_busqueda"
+                    type="text"
+                    autocomplete="off"
+                    spellcheck="false"
+                    value="{{ $clienteSearchValue }}"
+                    placeholder="Escribe para buscar cliente"
+                    class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-200"
+                    data-autocomplete-input="cliente"
+                >
+                <div class="mt-1 text-[11px] text-slate-400">Busca por nombre. Si no existe, se creará al guardar.</div>
+                <div id="cliente_results" class="absolute z-20 mt-1 hidden w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                    <div class="max-h-56 overflow-y-auto" data-autocomplete-list="cliente"></div>
+                    <div class="hidden border-t border-slate-100 px-3 py-2 text-xs text-slate-500" data-autocomplete-empty="cliente">
+                        No se encontraron clientes. Se creará con este nombre al guardar.
+                    </div>
+                </div>
             </div>
-            <select id="cliente_id" name="cliente_id" data-select2="true" data-placeholder="Selecciona un cliente" class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-200">
-                <option value=""></option>
-                @foreach ($clientesOptions as $cliente)
-                    <option value="{{ $cliente->id }}" @selected((string) old('cliente_id', $servicio->cliente_id) === (string) $cliente->id)>{{ $cliente->nombre }}</option>
-                @endforeach
-            </select>
             @error('cliente_id')
                 <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
             @enderror
         </div>
 
         <div>
-            <div class="mb-1 flex items-center justify-between gap-2">
-                <label for="agencia_id" class="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Agencia</label>
-                <button type="button" class="inline-flex items-center rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-semibold text-sky-700 hover:bg-sky-100" data-open-modal="agencia-modal">+ Nueva</button>
+            <label for="agencia_search" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Agencia</label>
+            <div class="relative" data-autocomplete-root="agencia">
+                <input type="hidden" id="agencia_id" name="agencia_id" value="{{ $selectedAgenciaId }}">
+                <input
+                    id="agencia_search"
+                    name="agencia_nombre_busqueda"
+                    type="text"
+                    autocomplete="off"
+                    spellcheck="false"
+                    value="{{ $agenciaSearchValue }}"
+                    placeholder="Escribe para buscar agencia"
+                    class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-200"
+                    data-autocomplete-input="agencia"
+                >
+                <div class="mt-1 text-[11px] text-slate-400">Busca por nombre. Si no existe, se creará al guardar.</div>
+                <div id="agencia_results" class="absolute z-20 mt-1 hidden w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                    <div class="max-h-56 overflow-y-auto" data-autocomplete-list="agencia"></div>
+                    <div class="hidden border-t border-slate-100 px-3 py-2 text-xs text-slate-500" data-autocomplete-empty="agencia">
+                        No se encontraron agencias. Se creará con este nombre al guardar.
+                    </div>
+                </div>
             </div>
-            <select id="agencia_id" name="agencia_id" data-select2="true" data-placeholder="Selecciona una agencia" class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-200">
-                <option value=""></option>
-                @foreach ($agenciasOptions as $agencia)
-                    <option value="{{ $agencia->id }}" @selected((string) old('agencia_id', $servicio->agencia_id) === (string) $agencia->id)>{{ $agencia->nombre }}</option>
-                @endforeach
-            </select>
             @error('agencia_id')
                 <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
             @enderror
@@ -152,88 +190,19 @@
     </div>
 </div>
 
-<div id="cliente-modal" class="fixed inset-0 z-50 hidden items-end justify-center bg-slate-900/35 p-3 sm:items-center">
-    <div class="w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl">
-        <div class="mb-3 flex items-center justify-between gap-2">
-            <h3 class="text-sm font-bold text-slate-800">Nuevo cliente</h3>
-            <button type="button" class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" data-close-modal="cliente-modal">✕</button>
-        </div>
-        <form id="cliente-inline-form" class="space-y-2" data-target-select="#cliente_id" data-endpoint="{{ route('servicios.clientes-inline') }}">
-            <input type="text" name="nombre" placeholder="Nombre" class="w-full rounded-md border border-slate-200 px-3 py-2 text-sm">
-            <input type="text" name="telefono" placeholder="Teléfono" class="w-full rounded-md border border-slate-200 px-3 py-2 text-sm">
-            <input type="text" name="direccion" placeholder="Dirección" class="w-full rounded-md border border-slate-200 px-3 py-2 text-sm">
-            <textarea name="observaciones" rows="2" placeholder="Observaciones" class="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"></textarea>
-            <p class="hidden text-xs text-rose-500" data-inline-error></p>
-            <div class="flex gap-2 pt-1">
-                <button type="submit" class="inline-flex flex-1 items-center justify-center rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white">Guardar</button>
-                <button type="button" class="inline-flex items-center justify-center rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600" data-close-modal="cliente-modal">Cancelar</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div id="agencia-modal" class="fixed inset-0 z-50 hidden items-end justify-center bg-slate-900/35 p-3 sm:items-center">
-    <div class="w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl">
-        <div class="mb-3 flex items-center justify-between gap-2">
-            <h3 class="text-sm font-bold text-slate-800">Nueva agencia</h3>
-            <button type="button" class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" data-close-modal="agencia-modal">✕</button>
-        </div>
-        <form id="agencia-inline-form" class="space-y-2" data-target-select="#agencia_id" data-endpoint="{{ route('servicios.agencias-inline') }}">
-            <input type="text" name="nombre" placeholder="Nombre" class="w-full rounded-md border border-slate-200 px-3 py-2 text-sm">
-            <input type="text" name="telefono" placeholder="Teléfono" class="w-full rounded-md border border-slate-200 px-3 py-2 text-sm">
-            <input type="text" name="direccion" placeholder="Dirección" class="w-full rounded-md border border-slate-200 px-3 py-2 text-sm">
-            <textarea name="observaciones" rows="2" placeholder="Observaciones" class="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"></textarea>
-            <p class="hidden text-xs text-rose-500" data-inline-error></p>
-            <div class="flex gap-2 pt-1">
-                <button type="submit" class="inline-flex flex-1 items-center justify-center rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white">Guardar</button>
-                <button type="button" class="inline-flex items-center justify-center rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600" data-close-modal="agencia-modal">Cancelar</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <style>
-    .select2-container .select2-selection--single {
-        height: 42px;
-        border-radius: 0.375rem;
-        border-color: rgb(226 232 240);
-        padding: 6px 10px;
-        display: flex;
-        align-items: center;
-    }
-
-    .select2-container--default .select2-selection--single .select2-selection__rendered {
-        color: rgb(15 23 42);
-        font-size: 0.875rem;
-        line-height: 1.25rem;
-        padding-left: 0;
-    }
-
-    .select2-container--default .select2-selection--single .select2-selection__arrow {
-        height: 40px;
-        right: 6px;
-    }
-
-    .select2-dropdown {
-        border-color: rgb(226 232 240);
-        border-radius: 0.5rem;
-        overflow: hidden;
-    }
-
-    .select2-search--dropdown .select2-search__field {
-        border-color: rgb(226 232 240);
-        border-radius: 0.375rem;
-        font-size: 0.875rem;
+    [data-autocomplete-option][data-active="true"] {
+        background-color: rgb(240 249 255);
     }
 </style>
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     (function () {
         const totalInputs = document.querySelectorAll('.js-total-input');
         const totalPreview = document.getElementById('total-preview');
-        const csrfToken = document.querySelector('input[name="_token"]')?.value;
+        const autocompleteSources = {
+            cliente: @json($clientesAutocomplete),
+            agencia: @json($agenciasAutocomplete),
+        };
 
         function updateTotal() {
             const values = Array.from(totalInputs).map((input) => Number.parseFloat(input.value || '0') || 0);
@@ -272,116 +241,157 @@
             syncRadioCards(name);
         });
 
-        if (window.jQuery && window.jQuery.fn.select2) {
-            window.jQuery('[data-select2="true"]').each(function () {
-                const placeholder = this.getAttribute('data-placeholder') || 'Selecciona una opción';
-                window.jQuery(this).select2({
-                    width: '100%',
-                    placeholder,
-                    allowClear: true,
-                    dropdownAutoWidth: true,
-                });
-            });
+        function normalizeText(value) {
+            return (value || '')
+                .toString()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .trim();
         }
 
-        function openModal(id) {
-            const modal = document.getElementById(id);
-            if (!modal) return;
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
+        function setupAutocomplete(key) {
+            const input = document.querySelector(`[data-autocomplete-input="${key}"]`);
+            const hiddenInput = document.getElementById(`${key}_id`);
+            const results = document.getElementById(`${key}_results`);
+            const list = document.querySelector(`[data-autocomplete-list="${key}"]`);
+            const emptyState = document.querySelector(`[data-autocomplete-empty="${key}"]`);
+            const options = autocompleteSources[key];
 
-        function closeModal(id) {
-            const modal = document.getElementById(id);
-            if (!modal) return;
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            const form = modal.querySelector('form');
-            form?.reset();
-            const error = modal.querySelector('[data-inline-error]');
-            if (error) {
-                error.textContent = '';
-                error.classList.add('hidden');
+            if (!input || !hiddenInput || !results || !list || !emptyState) {
+                return;
             }
-        }
 
-        document.querySelectorAll('[data-open-modal]').forEach((button) => {
-            button.addEventListener('click', function () {
-                openModal(this.getAttribute('data-open-modal'));
-            });
-        });
+            function hideResults() {
+                results.classList.add('hidden');
+            }
 
-        document.querySelectorAll('[data-close-modal]').forEach((button) => {
-            button.addEventListener('click', function () {
-                closeModal(this.getAttribute('data-close-modal'));
-            });
-        });
+            function showResults() {
+                results.classList.remove('hidden');
+            }
 
-        document.querySelectorAll('#cliente-modal, #agencia-modal').forEach((modal) => {
-            modal.addEventListener('click', function (event) {
-                if (event.target === modal) {
-                    closeModal(modal.id);
-                }
-            });
-        });
-
-        document.querySelectorAll('#cliente-inline-form, #agencia-inline-form').forEach((form) => {
-            form.addEventListener('submit', async function (event) {
-                event.preventDefault();
-                const endpoint = form.getAttribute('data-endpoint');
-                const targetSelectSelector = form.getAttribute('data-target-select');
-                const targetSelect = document.querySelector(targetSelectSelector);
-                const errorBox = form.querySelector('[data-inline-error]');
-                const submitButton = form.querySelector('button[type="submit"]');
-
-                if (!endpoint || !targetSelect || !csrfToken) {
+            function setSelection(option) {
+                if (!option) {
+                    hiddenInput.value = '';
                     return;
                 }
 
-                if (errorBox) {
-                    errorBox.textContent = '';
-                    errorBox.classList.add('hidden');
+                hiddenInput.value = option.id;
+                input.value = option.name;
+                hideResults();
+            }
+
+            function getMatches(query) {
+                const normalizedQuery = normalizeText(query);
+                const pool = normalizedQuery === ''
+                    ? options.slice(0, 8)
+                    : options.filter((option) => normalizeText(option.name).includes(normalizedQuery)).slice(0, 8);
+
+                return pool;
+            }
+
+            function syncHiddenValueFromInput() {
+                const exactMatch = options.find((option) => normalizeText(option.name) === normalizeText(input.value));
+                hiddenInput.value = exactMatch ? exactMatch.id : '';
+            }
+
+            function renderOptions(matches) {
+                list.innerHTML = '';
+
+                if (!matches.length) {
+                    emptyState.classList.remove('hidden');
+                    showResults();
+                    return;
                 }
 
-                submitButton?.setAttribute('disabled', 'disabled');
+                emptyState.classList.add('hidden');
 
-                try {
-                    const response = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': csrfToken,
-                        },
-                        body: JSON.stringify(Object.fromEntries(new FormData(form).entries())),
+                matches.forEach((option, index) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-sky-50';
+                    button.dataset.autocompleteOption = key;
+                    button.dataset.active = index === 0 ? 'true' : 'false';
+                    button.innerHTML = `<span>${option.name}</span><span class="text-[11px] text-slate-400">#${option.id}</span>`;
+                    button.addEventListener('mousedown', function (event) {
+                        event.preventDefault();
+                        setSelection(option);
                     });
+                    list.appendChild(button);
+                });
 
-                    const result = await response.json();
+                showResults();
+            }
 
-                    if (!response.ok) {
-                        const firstError = result?.errors ? Object.values(result.errors).flat()[0] : 'No se pudo guardar el registro.';
-                        throw new Error(firstError);
+            function moveActive(delta) {
+                const items = Array.from(list.querySelectorAll('[data-autocomplete-option]'));
+                if (!items.length) {
+                    return;
+                }
+
+                const currentIndex = items.findIndex((item) => item.dataset.active === 'true');
+                const nextIndex = currentIndex === -1
+                    ? 0
+                    : (currentIndex + delta + items.length) % items.length;
+
+                items.forEach((item, index) => {
+                    item.dataset.active = index === nextIndex ? 'true' : 'false';
+                });
+
+                items[nextIndex].scrollIntoView({ block: 'nearest' });
+            }
+
+            function selectActive() {
+                const activeItem = list.querySelector('[data-autocomplete-option][data-active="true"]');
+                activeItem?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+            }
+
+            input.addEventListener('focus', function () {
+                renderOptions(getMatches(input.value));
+            });
+
+            input.addEventListener('input', function () {
+                syncHiddenValueFromInput();
+                renderOptions(getMatches(input.value));
+            });
+
+            input.addEventListener('keydown', function (event) {
+                if (results.classList.contains('hidden') && ['ArrowDown', 'ArrowUp'].includes(event.key)) {
+                    renderOptions(getMatches(input.value));
+                }
+
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    moveActive(1);
+                }
+
+                if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    moveActive(-1);
+                }
+
+                if (event.key === 'Enter' && !results.classList.contains('hidden')) {
+                    const hasOptions = list.querySelector('[data-autocomplete-option]');
+                    if (hasOptions) {
+                        event.preventDefault();
+                        selectActive();
                     }
+                }
 
-                    const option = new Option(result.nombre, result.id, true, true);
-                    targetSelect.add(option);
-
-                    if (window.jQuery && window.jQuery.fn.select2) {
-                        window.jQuery(targetSelect).trigger('change');
-                    } else {
-                        targetSelect.dispatchEvent(new Event('change', { bubbles: true }));
-                    }
-
-                    closeModal(form.closest('[id$="-modal"]').id);
-                } catch (error) {
-                    if (errorBox) {
-                        errorBox.textContent = error.message || 'No se pudo guardar el registro.';
-                        errorBox.classList.remove('hidden');
-                    }
-                } finally {
-                    submitButton?.removeAttribute('disabled');
+                if (event.key === 'Escape') {
+                    hideResults();
                 }
             });
-        });
+
+            input.addEventListener('blur', function () {
+                syncHiddenValueFromInput();
+                window.setTimeout(hideResults, 120);
+            });
+
+            input.closest('form')?.addEventListener('submit', syncHiddenValueFromInput);
+        }
+
+        setupAutocomplete('cliente');
+        setupAutocomplete('agencia');
     })();
 </script>

@@ -12,11 +12,23 @@ class ServicioRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'cliente_id' => $this->filled('cliente_id') ? $this->input('cliente_id') : null,
+            'cliente_nombre_busqueda' => trim((string) $this->input('cliente_nombre_busqueda')),
+            'agencia_id' => $this->filled('agencia_id') ? $this->input('agencia_id') : null,
+            'agencia_nombre_busqueda' => trim((string) $this->input('agencia_nombre_busqueda')),
+        ]);
+    }
+
     public function rules(): array
     {
         return [
-            'cliente_id' => ['required', 'integer', 'exists:clientes,id'],
-            'agencia_id' => ['required', 'integer', 'exists:agencias,id'],
+            'cliente_id' => ['nullable', 'integer', 'exists:clientes,id'],
+            'cliente_nombre_busqueda' => ['required_without:cliente_id', 'nullable', 'string', 'max:150'],
+            'agencia_id' => ['nullable', 'integer', 'exists:agencias,id'],
+            'agencia_nombre_busqueda' => ['required_without:agencia_id', 'nullable', 'string', 'max:150'],
             'tipo_servicio' => ['required', Rule::in(['ENVIO', 'RECOJO'])],
             'fecha_servicio' => ['nullable', 'date'],
             'cantidad_bultos' => ['required', 'integer', 'min:1'],
@@ -34,7 +46,9 @@ class ServicioRequest extends FormRequest
     {
         return [
             'cliente_id' => 'cliente',
+            'cliente_nombre_busqueda' => 'cliente',
             'agencia_id' => 'agencia',
+            'agencia_nombre_busqueda' => 'agencia',
             'tipo_servicio' => 'tipo de servicio',
             'fecha_servicio' => 'fecha de servicio',
             'cantidad_bultos' => 'cantidad de bultos',

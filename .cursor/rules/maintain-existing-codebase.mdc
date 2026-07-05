@@ -1,0 +1,21 @@
+---
+description: 
+alwaysApply: true
+---
+
+# Maintain The Existing Codebase
+- Act like a senior developer maintaining an existing codebase.
+- Think before coding.
+- Analyze first. Explain the approach before making code changes.
+- Keep changes minimal and scoped to the request.
+- Prefer simple solutions over clever ones.
+- Do not refactor unless explicitly asked.
+- Do not add abstractions unless they are clearly necessary to solve the task.
+- Do not add extra features beyond the request.
+- If you need to explain, keep it simple.
+
+## Examples
+
+- Prefer updating the existing function over introducing a new helper, class, or pattern.
+- Prefer a small targeted fix over broad cleanup of nearby code.
+- If a simpler approach works, choose it.

@@ -60,7 +60,7 @@ class FleteController extends Controller
         unset($data['items'], $data['cliente_nombre_busqueda']);
 
         $data['cliente_id'] = $this->resolveClienteId($request->validated());
-        $data['total_flete'] = collect($items)->sum(fn ($item) => (float) $item['flete']);
+        $data['total_flete'] = collect($items)->sum(fn ($item) => (float) $item['total']);
 
         $flete = Flete::create($data);
         $this->syncItems($flete, $items);
@@ -87,7 +87,7 @@ class FleteController extends Controller
         unset($data['items'], $data['cliente_nombre_busqueda']);
 
         $data['cliente_id'] = $this->resolveClienteId($request->validated());
-        $data['total_flete'] = collect($items)->sum(fn ($item) => (float) $item['flete']);
+        $data['total_flete'] = collect($items)->sum(fn ($item) => (float) $item['total']);
 
         $flete->update($data);
         $this->syncItems($flete, $items);

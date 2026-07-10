@@ -37,6 +37,6 @@
     </table>
 
     <div class="capture-total">
-        <strong>Total flete: S/ {{ number_format((float) $flete->total_flete, 2) }}</strong>
+        <strong>Total general: S/ {{ number_format((float) $flete->total_flete, 2) }}</strong>
     </div>
 </div>

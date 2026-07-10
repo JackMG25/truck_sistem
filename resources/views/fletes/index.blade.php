@@ -85,7 +85,7 @@
                                 </form>
                             </div>
                         </div>
-                        <p class="mt-3 text-base font-bold text-slate-800">Total flete: S/ {{ number_format((float) $flete->total_flete, 2) }}</p>
+                        <p class="mt-3 text-base font-bold text-slate-800">Total general: S/ {{ number_format((float) $flete->total_flete, 2) }}</p>
                     </article>
                 @endforeach
             </div>
@@ -98,7 +98,7 @@
                                 <th class="px-3 py-3">Cliente</th>
                                 <th class="px-3 py-3">Fecha</th>
                                 <th class="px-3 py-3">Productos</th>
-                                <th class="px-3 py-3">Total flete</th>
+                                <th class="px-3 py-3">Total general</th>
                                 <th class="px-3 py-3 text-right">Acciones</th>
                             </tr>
                         </thead>

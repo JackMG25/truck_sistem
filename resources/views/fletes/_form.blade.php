@@ -36,7 +36,7 @@
         ]];
     }
 
-    $totalFletePreview = collect($itemsData)->sum(fn ($item) => (float) ($item['flete'] ?: 0));
+    $totalFletePreview = collect($itemsData)->sum(fn ($item) => (float) ($item['total'] ?: 0));
 @endphp
 
 <div class="flete-form space-y-5">
@@ -101,7 +101,7 @@
             <table class="flete-excel-table">
                 <thead>
                     <tr>
-                        <th class="col-fecha">Fecha</th>
+                        <th class="col-fecha">F.</th>
                         <th class="col-desc">Descripción</th>
                         <th class="col-num">Servicio</th>
                         <th class="col-num">Flete</th>
@@ -113,7 +113,7 @@
                     @foreach ($itemsData as $index => $item)
                         <tr class="item-row" data-index="{{ $index }}">
                             <td>
-                                <input type="date" name="items[{{ $index }}][fecha]" value="{{ $item['fecha'] }}" class="js-item-input flete-cell-input">
+                                <input type="date" name="items[{{ $index }}][fecha]" value="{{ $item['fecha'] }}" class="js-item-input flete-cell-input flete-cell-date">
                                 @error("items.{$index}.fecha")
                                     <p class="px-1 text-xs text-rose-500">{{ $message }}</p>
                                 @enderror
@@ -144,9 +144,9 @@
         </div>
     </div>
 
-    {{-- Total flete --}}
+    {{-- Total general --}}
     <div class="flete-total-bar">
-        <span class="text-base font-bold text-slate-700 sm:text-lg">Total flete</span>
+        <span class="text-base font-bold text-slate-700 sm:text-lg">Total general</span>
         <div class="flex items-center gap-1 text-xl font-extrabold text-slate-900 sm:text-2xl">
             <span>S/</span>
             <span id="total-flete-preview">{{ number_format($totalFletePreview, 2, '.', ',') }}</span>
@@ -238,7 +238,7 @@
         white-space: nowrap;
     }
 
-    .flete-form .flete-excel-table .col-fecha { width: 7.5rem; }
+    .flete-form .flete-excel-table .col-fecha { width: 4.25rem; }
     .flete-form .flete-excel-table .col-desc { width: auto; }
     .flete-form .flete-excel-table .col-num { width: 5.25rem; }
     .flete-form .flete-excel-table .col-del { width: 2.75rem; }
@@ -265,6 +265,38 @@
     .flete-form .flete-cell-num {
         text-align: right;
         font-variant-numeric: tabular-nums;
+    }
+
+    .flete-form .flete-excel-table td:first-child {
+        overflow: hidden;
+    }
+
+    /* Fecha compacta: texto pequeño, icono de calendario grande */
+    .flete-form .flete-cell-date {
+        min-height: 2.875rem;
+        font-size: 0.625rem;
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .flete-form .flete-cell-date::-webkit-calendar-picker-indicator {
+        width: 1.275rem;
+        height: 1.275rem;
+        margin: 0;
+        padding: 0;
+        cursor: pointer;
+        opacity: 1;
+        transform: scale(1.25);
+        transform-origin: center;
+    }
+
+    .flete-form .flete-cell-date::-moz-calendar-picker-indicator {
+        width: 1.375rem;
+        height: 1.375rem;
+        cursor: pointer;
     }
 
     .flete-form .flete-remove-btn {
@@ -350,8 +382,8 @@
         }
 
         function updateTotalFlete() {
-            const fleteInputs = tbody.querySelectorAll('.js-item-flete');
-            const total = Array.from(fleteInputs).reduce((sum, input) => sum + parseNumber(input.value), 0);
+            const totalInputs = tbody.querySelectorAll('.js-item-total');
+            const total = Array.from(totalInputs).reduce((sum, input) => sum + parseNumber(input.value), 0);
             if (totalFletePreview) {
                 totalFletePreview.textContent = formatMoney(total);
             }
@@ -383,6 +415,7 @@
         function bindRowEvents(row) {
             const servicioInput = row.querySelector('.js-item-servicio');
             const fleteInput = row.querySelector('.js-item-flete');
+            const totalInput = row.querySelector('.js-item-total');
             const removeBtn = row.querySelector('.js-remove-row');
 
             servicioInput?.addEventListener('input', function () {
@@ -394,6 +427,8 @@
                 updateRowTotal(row);
                 updateTotalFlete();
             });
+
+            totalInput?.addEventListener('input', updateTotalFlete);
 
             removeBtn?.addEventListener('click', function () {
                 const rows = tbody.querySelectorAll('.item-row');
@@ -422,7 +457,7 @@
             tr.dataset.index = String(index);
             tr.innerHTML = `
                 <td>
-                    <input type="date" name="items[${index}][fecha]" value="${fecha}" class="js-item-input flete-cell-input">
+                    <input type="date" name="items[${index}][fecha]" value="${fecha}" class="js-item-input flete-cell-input flete-cell-date">
                 </td>
                 <td>
                     <input type="text" name="items[${index}][descripcion]" placeholder="Descripción" class="js-item-input flete-cell-input">
@@ -456,6 +491,14 @@
 
         tbody.querySelectorAll('.item-row').forEach(bindRowEvents);
         updateTotalFlete();
+
+        // Evita que la rueda del mouse cambie los montos cuando el input tiene foco
+        tbody.addEventListener('wheel', function (event) {
+            const target = event.target;
+            if (target.matches('.flete-cell-num') && document.activeElement === target) {
+                event.preventDefault();
+            }
+        }, { passive: false });
 
         function normalizeText(value) {
             return (value || '')

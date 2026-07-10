@@ -17,17 +17,24 @@ class FleteController extends Controller
         $search = trim((string) $request->string('q'));
 
         $fletes = Flete::query()
-            ->with(['cliente:id,nombre'])
-            ->withCount('items')
+            ->with(['cliente:id,nombre', 'items'])
             ->when($search !== '', function ($query) use ($search) {
-                if (ctype_digit($search)) {
-                    $query->where('id', $search);
+                $query->where(function ($subquery) use ($search) {
+                    if (ctype_digit($search)) {
+                        $subquery->where('id', $search);
 
-                    return;
-                }
+                        return;
+                    }
 
-                $query->whereHas('cliente', function ($q) use ($search) {
-                    $q->where('nombre', 'like', "%{$search}%");
+                    $parsedDate = $this->parseSearchDate($search);
+
+                    if ($parsedDate !== null) {
+                        $subquery->orWhereDate('fecha', $parsedDate);
+                    }
+
+                    $subquery->orWhereHas('cliente', function ($q) use ($search) {
+                        $q->where('nombre', 'like', "%{$search}%");
+                    });
                 });
             })
             ->latest('fecha')
@@ -123,6 +130,29 @@ class FleteController extends Controller
 
         foreach ($items as $item) {
             $flete->items()->create($item);
+        }
+    }
+
+    private function parseSearchDate(string $search): ?string
+    {
+        $formats = ['d/m/Y', 'd-m-Y', 'Y-m-d', 'd/m/y', 'd-m-y'];
+
+        foreach ($formats as $format) {
+            try {
+                $date = Carbon::createFromFormat($format, $search);
+
+                if ($date !== false) {
+                    return $date->format('Y-m-d');
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        try {
+            return Carbon::parse($search)->format('Y-m-d');
+        } catch (\Throwable) {
+            return null;
         }
     }
 }

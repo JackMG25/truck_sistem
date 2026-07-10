@@ -19,7 +19,8 @@ class FleteController extends Controller
         $search = trim((string) $request->string('q'));
 
         $fletes = Flete::query()
-            ->with(['cliente:id,nombre', 'items'])
+            ->with(['cliente:id,nombre'])
+            ->withCount('items')
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($subquery) use ($search) {
                     if (ctype_digit($search)) {
@@ -62,7 +63,6 @@ class FleteController extends Controller
         unset($data['items'], $data['cliente_nombre_busqueda']);
 
         $data['cliente_id'] = $this->resolveClienteId($request->validated());
-        $data['total_flete'] = collect($items)->sum(fn ($item) => (float) $item['total']);
 
         $flete = Flete::create($data);
         $this->syncItems($flete, $items);
@@ -89,7 +89,6 @@ class FleteController extends Controller
         unset($data['items'], $data['cliente_nombre_busqueda']);
 
         $data['cliente_id'] = $this->resolveClienteId($request->validated());
-        $data['total_flete'] = collect($items)->sum(fn ($item) => (float) $item['total']);
 
         $flete->update($data);
         $this->syncItems($flete, $items);
@@ -110,12 +109,9 @@ class FleteController extends Controller
 
     public function download(Flete $flete): Response
     {
-        $flete->load(['cliente:id,nombre', 'items']);
-
-        $pdf = Pdf::loadView('fletes.pdf', compact('flete'))
-            ->setPaper('a4', 'portrait');
-
-        return $pdf->download('flete-'.$flete->id.'.pdf');
+        return Pdf::loadView('fletes.pdf', [
+            'flete' => $flete->loadForPdf(),
+        ])->stream("flete-{$flete->id}.pdf");
     }
 
     private function formOptions(): array
@@ -143,6 +139,9 @@ class FleteController extends Controller
         foreach ($items as $item) {
             $flete->items()->create($item);
         }
+
+        // Total general guardado en fletes = suma de la columna total de cada ítem.
+        $flete->update(['total_general' => $flete->items()->sum('total')]);
     }
 
     private function parseSearchDate(string $search): ?string

@@ -16,12 +16,12 @@ class Flete extends Model
     protected $fillable = [
         'cliente_id',
         'fecha',
-        'total_flete',
+        'total_general',
     ];
 
     protected $casts = [
         'fecha' => 'date',
-        'total_flete' => 'decimal:2',
+        'total_general' => 'decimal:2',
     ];
 
     public function cliente(): BelongsTo
@@ -32,5 +32,13 @@ class Flete extends Model
     public function items(): HasMany
     {
         return $this->hasMany(FleteItem::class, 'flete_id');
+    }
+
+    /** Carga solo lo necesario para generar el PDF del registro. */
+    public function loadForPdf(): static
+    {
+        $this->load(['cliente:id,nombre', 'items']);
+
+        return $this;
     }
 }

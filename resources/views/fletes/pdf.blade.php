@@ -93,6 +93,6 @@
         </tbody>
     </table>
 
-    <p class="total">Total general: S/ {{ number_format((float) $flete->total_flete, 2) }}</p>
+    <p class="total">Total general: S/ {{ number_format((float) $flete->total_general, 2) }}</p>
 </body>
 </html>

@@ -56,13 +56,15 @@
                             <div>
                                 <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Flete #{{ $flete->id }}</p>
                                 <h3 class="mt-1 text-base font-semibold text-slate-800">{{ $flete->cliente?->nombre ?? 'Sin cliente' }}</h3>
-                                <p class="mt-0.5 text-sm text-slate-500">{{ $flete->fecha?->format('d/m/Y') ?? '—' }} · {{ $flete->items->count() }} producto{{ $flete->items->count() === 1 ? '' : 's' }}</p>
+                                <p class="mt-0.5 text-sm text-slate-500">{{ $flete->fecha?->format('d/m/Y') ?? '—' }} · {{ $flete->items_count }} producto{{ $flete->items_count === 1 ? '' : 's' }}</p>
                             </div>
                             <div class="flex items-center gap-2">
                                 <a
                                     href="{{ route('fletes.download', $flete) }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
-                                    aria-label="Descargar flete {{ $flete->id }}"
+                                    aria-label="Ver PDF del flete {{ $flete->id }}"
                                 >
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M7.5 11.25 12 15.75m0 0 4.5-4.5M12 15.75V3" />
@@ -84,7 +86,7 @@
                                 </form>
                             </div>
                         </div>
-                        <p class="mt-3 text-base font-bold text-slate-800">Total general: S/ {{ number_format((float) $flete->total_flete, 2) }}</p>
+                        <p class="mt-3 text-base font-bold text-slate-800">Total general: S/ {{ number_format((float) $flete->total_general, 2) }}</p>
                     </article>
                 @endforeach
             </div>
@@ -106,14 +108,16 @@
                                 <tr>
                                     <td class="px-3 py-3 font-medium text-slate-800">{{ $flete->cliente?->nombre ?? 'Sin cliente' }}</td>
                                     <td class="px-3 py-3">{{ $flete->fecha?->format('d/m/Y') ?? '—' }}</td>
-                                    <td class="px-3 py-3">{{ $flete->items->count() }}</td>
-                                    <td class="px-3 py-3 font-semibold">S/ {{ number_format((float) $flete->total_flete, 2) }}</td>
+                                    <td class="px-3 py-3">{{ $flete->items_count }}</td>
+                                    <td class="px-3 py-3 font-semibold">S/ {{ number_format((float) $flete->total_general, 2) }}</td>
                                     <td class="px-3 py-3">
                                         <div class="flex justify-end gap-2">
                                             <a
                                                 href="{{ route('fletes.download', $flete) }}"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
                                                 class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
-                                                aria-label="Descargar flete {{ $flete->id }}"
+                                                aria-label="Ver PDF del flete {{ $flete->id }}"
                                             >
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M7.5 11.25 12 15.75m0 0 4.5-4.5M12 15.75V3" />

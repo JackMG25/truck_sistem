@@ -12,6 +12,8 @@ class FleteItem extends Model
 
     protected $table = 'flete_items';
 
+    // "total" = servicio + flete por fila; el total del registro se guarda en fletes.total_general.
+
     protected $fillable = [
         'flete_id',
         'fecha',

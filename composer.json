@@ -51,7 +51,8 @@
             "@php artisan config:cache",
             "@php artisan route:cache",
             "@php artisan view:cache",
-            "@php artisan event:cache"
+            "@php artisan event:cache",
+            "@php -r \"foreach (['storage/app/dompdf/fonts', 'storage/app/dompdf/tmp'] as \\$dir) { if (!is_dir(\\$dir)) { mkdir(\\$dir, 0755, true); } }\""
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",

@@ -10,6 +10,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -121,11 +122,27 @@ class FleteController extends Controller
             ->with('success', 'Flete eliminado correctamente.');
     }
 
-    public function download(Flete $flete): Response
+    public function download(Flete $flete): Response|RedirectResponse
     {
-        return Pdf::loadView('fletes.pdf', [
-            'flete' => $flete->loadForPdf(),
-        ])->stream("flete-{$flete->id}.pdf");
+        try {
+            $pdf = Pdf::loadView('fletes.pdf', [
+                'flete' => $flete->loadForPdf(),
+            ]);
+
+            return response($pdf->output(), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="flete-'.$flete->id.'.pdf"',
+            ]);
+        } catch (\Throwable $exception) {
+            Log::error('Error al generar PDF de flete', [
+                'flete_id' => $flete->id,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return redirect()
+                ->route('fletes.index')
+                ->with('error', 'No se pudo generar el PDF. Verifica que DomPDF esté instalado y que storage/ tenga permisos de escritura.');
+        }
     }
 
     public function pagos(Flete $flete): View

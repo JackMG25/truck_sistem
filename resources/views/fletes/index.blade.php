@@ -59,16 +59,15 @@
                                 <p class="mt-0.5 text-sm text-slate-500">{{ $flete->fecha?->format('d/m/Y') ?? '—' }} · {{ $flete->items->count() }} producto{{ $flete->items->count() === 1 ? '' : 's' }}</p>
                             </div>
                             <div class="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    class="js-download-flete inline-flex h-10 w-10 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
-                                    data-flete-id="{{ $flete->id }}"
+                                <a
+                                    href="{{ route('fletes.download', $flete) }}"
+                                    class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
                                     aria-label="Descargar flete {{ $flete->id }}"
                                 >
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M7.5 11.25 12 15.75m0 0 4.5-4.5M12 15.75V3" />
                                     </svg>
-                                </button>
+                                </a>
                                 <a href="{{ route('fletes.edit', $flete) }}" class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100" aria-label="Editar flete {{ $flete->id }}">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931ZM18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
@@ -111,16 +110,15 @@
                                     <td class="px-3 py-3 font-semibold">S/ {{ number_format((float) $flete->total_flete, 2) }}</td>
                                     <td class="px-3 py-3">
                                         <div class="flex justify-end gap-2">
-                                            <button
-                                                type="button"
-                                                class="js-download-flete inline-flex h-8 w-8 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
-                                                data-flete-id="{{ $flete->id }}"
+                                            <a
+                                                href="{{ route('fletes.download', $flete) }}"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
                                                 aria-label="Descargar flete {{ $flete->id }}"
                                             >
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M7.5 11.25 12 15.75m0 0 4.5-4.5M12 15.75V3" />
                                                 </svg>
-                                            </button>
+                                            </a>
                                             <a href="{{ route('fletes.edit', $flete) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100" aria-label="Editar flete {{ $flete->id }}">
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931ZM18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
@@ -144,119 +142,14 @@
                 </div>
             </div>
 
-            <div class="sr-only" aria-hidden="true">
-                @foreach ($fletes as $flete)
-                    @include('fletes._capture', ['flete' => $flete])
-                @endforeach
-            </div>
-
             <div>
                 {{ $fletes->links() }}
             </div>
         @endif
     </section>
 
-    <style>
-        .flete-capture-card {
-            position: fixed;
-            left: -9999px;
-            top: 0;
-            width: 720px;
-            padding: 24px;
-            background: #fff;
-            color: #1e293b;
-            font-family: Figtree, ui-sans-serif, system-ui, sans-serif;
-        }
-
-        .flete-capture-card .capture-header h2 {
-            margin: 0;
-            font-size: 22px;
-            font-weight: 800;
-        }
-
-        .flete-capture-card .capture-header p {
-            margin: 4px 0 0;
-            font-size: 14px;
-            color: #64748b;
-        }
-
-        .flete-capture-card .capture-meta {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin: 20px 0 16px;
-            font-size: 16px;
-        }
-
-        .flete-capture-card .capture-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        .flete-capture-card .capture-table th,
-        .flete-capture-card .capture-table td {
-            border: 1px solid #94a3b8;
-            padding: 8px 6px;
-            text-align: left;
-        }
-
-        .flete-capture-card .capture-table th {
-            background: #e2e8f0;
-            font-weight: 700;
-            text-transform: uppercase;
-            font-size: 11px;
-        }
-
-        .flete-capture-card .capture-total {
-            margin-top: 16px;
-            text-align: right;
-            font-size: 18px;
-        }
-    </style>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+MMgHw4zVIl/X+pfj4X1jlm4JgGUYoK5FynX0/zgU+f3D2MvmtjY7byaWEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
         (function () {
-            document.querySelectorAll('.js-download-flete').forEach(function (button) {
-                button.addEventListener('click', async function () {
-                    const fleteId = button.getAttribute('data-flete-id');
-                    const target = document.getElementById('flete-capture-' + fleteId);
-
-                    if (!target || typeof html2canvas === 'undefined') {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'No se pudo descargar',
-                            text: 'Intenta de nuevo en unos segundos.',
-                        });
-                        return;
-                    }
-
-                    button.disabled = true;
-
-                    try {
-                        const canvas = await html2canvas(target, {
-                            scale: 2,
-                            backgroundColor: '#ffffff',
-                            useCORS: true,
-                        });
-
-                        const link = document.createElement('a');
-                        link.download = 'flete-' + fleteId + '.png';
-                        link.href = canvas.toDataURL('image/png');
-                        link.click();
-                    } catch (error) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error al generar imagen',
-                            text: 'No se pudo crear la imagen del registro.',
-                        });
-                    } finally {
-                        button.disabled = false;
-                    }
-                });
-            });
-
             document.querySelectorAll('.delete-form').forEach(function (form) {
                 form.addEventListener('submit', function (e) {
                     e.preventDefault();

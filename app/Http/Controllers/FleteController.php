@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Requests\FleteRequest;
 use App\Models\Cliente;
 use App\Models\Flete;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class FleteController extends Controller
 {
@@ -104,6 +106,16 @@ class FleteController extends Controller
         return redirect()
             ->route('fletes.index')
             ->with('success', 'Flete eliminado correctamente.');
+    }
+
+    public function download(Flete $flete): Response
+    {
+        $flete->load(['cliente:id,nombre', 'items']);
+
+        $pdf = Pdf::loadView('fletes.pdf', compact('flete'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download('flete-'.$flete->id.'.pdf');
     }
 
     private function formOptions(): array

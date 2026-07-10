@@ -13,14 +13,8 @@
         }
 
         h1 {
-            margin: 0 0 4px;
+            margin: 0 0 16px;
             font-size: 20px;
-        }
-
-        .subtitle {
-            margin: 0 0 20px;
-            color: #64748b;
-            font-size: 12px;
         }
 
         .meta {
@@ -50,16 +44,22 @@
         }
 
         .total {
-            margin-top: 16px;
+            margin-top: 8px;
             text-align: right;
             font-size: 14px;
             font-weight: bold;
+        }
+        .total-cancelado {
+            color: red;
+        }
+
+        .total:first-of-type {
+            margin-top: 16px;
         }
     </style>
 </head>
 <body>
     <h1>Registro de Flete #{{ $flete->id }}</h1>
-    <p class="subtitle">{{ config('app.name', 'Camionero Carga') }}</p>
 
     <div class="meta">
         <p><strong>Cliente:</strong> {{ $flete->cliente?->nombre ?? 'Sin cliente' }}</p>
@@ -93,6 +93,12 @@
         </tbody>
     </table>
 
-    <p class="total">Total general: S/ {{ number_format((float) $flete->total_general, 2) }}</p>
+    <p class="total">total general: S/ {{ number_format((float) $flete->total_general, 2) }}</p>
+
+    @foreach ($flete->pagos as $pago)
+        <p class="total-cancelado total">{{ strtolower($pago->descripcion) }}: S/ -{{ number_format((float) $pago->monto, 2) }}</p>
+    @endforeach
+
+    <p class="total">total a pagar: S/ {{ number_format($flete->faltaPagar(), 2) }}</p>
 </body>
 </html>

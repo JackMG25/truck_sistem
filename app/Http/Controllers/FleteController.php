@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\FleteRequest;
 use App\Models\Cliente;
 use App\Models\Flete;
+use App\Models\FletePago;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,8 @@ class FleteController extends Controller
         $fletes = Flete::query()
             ->with(['cliente:id,nombre'])
             ->withCount('items')
+            ->withCount('pagos')
+            ->withSum('pagos as total_pagado', 'monto')
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($subquery) use ($search) {
                     if (ctype_digit($search)) {
@@ -40,7 +43,6 @@ class FleteController extends Controller
                     });
                 });
             })
-            ->latest('fecha')
             ->latest('id')
             ->paginate(10)
             ->withQueryString();
@@ -88,6 +90,18 @@ class FleteController extends Controller
         $items = $data['items'];
         unset($data['items'], $data['cliente_nombre_busqueda']);
 
+        $nuevoTotal = round(collect($items)->sum(fn ($item) => (float) $item['total']), 2);
+        $totalPagado = round($flete->totalPagado(), 2);
+
+        if ($nuevoTotal < $totalPagado) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors([
+                    'items' => 'El total general (S/ '.number_format($nuevoTotal, 2).') no puede ser menor a lo ya pagado (S/ '.number_format($totalPagado, 2).'). Elimina o corrige pagos primero.',
+                ]);
+        }
+
         $data['cliente_id'] = $this->resolveClienteId($request->validated());
 
         $flete->update($data);
@@ -112,6 +126,72 @@ class FleteController extends Controller
         return Pdf::loadView('fletes.pdf', [
             'flete' => $flete->loadForPdf(),
         ])->stream("flete-{$flete->id}.pdf");
+    }
+
+    public function pagos(Flete $flete): View
+    {
+        $flete->load([
+            'cliente:id,nombre',
+            'pagos' => fn ($query) => $query->latest('id'),
+        ]);
+
+        $totalPagado = $flete->totalPagado();
+        $faltaPagar = $flete->faltaPagar();
+
+        return view('fletes.pagos', compact('flete', 'totalPagado', 'faltaPagar'));
+    }
+
+    public function storePago(Request $request, Flete $flete): RedirectResponse
+    {
+        $faltaPagar = round($flete->faltaPagar(), 2);
+
+        if ($faltaPagar <= 0) {
+            return redirect()
+                ->route('fletes.pagos', $flete)
+                ->withErrors(['monto' => 'Este flete ya está pagado completamente.']);
+        }
+
+        $request->merge([
+            'descripcion' => trim((string) $request->input('descripcion')),
+        ]);
+
+        $data = $request->validate([
+            'descripcion' => ['required', 'string', 'max:500'],
+            'monto' => ['required', 'numeric', 'min:0.01', 'max:'.$faltaPagar],
+        ], [
+            'descripcion.required' => 'La descripción es obligatoria.',
+            'monto.max' => 'El monto no puede exceder lo que falta por pagar (S/ '.number_format($faltaPagar, 2).').',
+            'monto.min' => 'El monto debe ser mayor a 0.',
+        ], [
+            'descripcion' => 'descripción',
+            'monto' => 'monto',
+        ]);
+
+        $data['monto'] = round((float) $data['monto'], 2);
+
+        if ($data['monto'] > $faltaPagar) {
+            return redirect()
+                ->route('fletes.pagos', $flete)
+                ->withInput()
+                ->withErrors(['monto' => 'El monto no puede exceder lo que falta por pagar (S/ '.number_format($faltaPagar, 2).').']);
+        }
+
+        $flete->pagos()->create($data);
+
+        return redirect()
+            ->route('fletes.pagos', $flete)
+            ->with('success', 'Pago registrado correctamente.');
+    }
+
+    public function destroyPago(Flete $flete, FletePago $pago): RedirectResponse
+    {
+        abort_unless($pago->flete_id === $flete->id, 404);
+
+        $pago->delete();
+
+        return redirect()
+            ->route('fletes.pagos', $flete)
+            ->with('success', 'Pago eliminado correctamente.');
     }
 
     private function formOptions(): array

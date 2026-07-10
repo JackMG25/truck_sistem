@@ -21,6 +21,9 @@ Route::middleware('auth')->group(function () {
     Route::get('servicios/{servicio}/pagos', [ServicioController::class, 'pagos'])->name('servicios.pagos');
     Route::post('servicios/{servicio}/pagos', [ServicioController::class, 'storePago'])->name('servicios.pagos.store');
     Route::get('fletes/{flete}/download', [FleteController::class, 'download'])->name('fletes.download');
+    Route::get('fletes/{flete}/pagos', [FleteController::class, 'pagos'])->name('fletes.pagos');
+    Route::post('fletes/{flete}/pagos', [FleteController::class, 'storePago'])->name('fletes.pagos.store');
+    Route::delete('fletes/{flete}/pagos/{pago}', [FleteController::class, 'destroyPago'])->name('fletes.pagos.destroy');
     Route::resource('fletes', FleteController::class)->except(['show']);
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

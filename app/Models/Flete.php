@@ -34,10 +34,33 @@ class Flete extends Model
         return $this->hasMany(FleteItem::class, 'flete_id');
     }
 
+    public function pagos(): HasMany
+    {
+        return $this->hasMany(FletePago::class, 'flete_id');
+    }
+
+    public function totalPagado(): float
+    {
+        if ($this->relationLoaded('pagos')) {
+            return (float) $this->pagos->sum('monto');
+        }
+
+        return (float) $this->pagos()->sum('monto');
+    }
+
+    public function faltaPagar(): float
+    {
+        return max((float) $this->total_general - $this->totalPagado(), 0);
+    }
+
     /** Carga solo lo necesario para generar el PDF del registro. */
     public function loadForPdf(): static
     {
-        $this->load(['cliente:id,nombre', 'items']);
+        $this->load([
+            'cliente:id,nombre',
+            'items',
+            'pagos' => fn ($query) => $query->orderBy('id'),
+        ]);
 
         return $this;
     }

@@ -70,6 +70,16 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M7.5 11.25 12 15.75m0 0 4.5-4.5M12 15.75V3" />
                                     </svg>
                                 </a>
+                                <a
+                                    href="{{ route('fletes.pagos', $flete) }}"
+                                    class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                    aria-label="Pagos del flete {{ $flete->id }}"
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 15h.01M11 15h2m5-10H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z" />
+                                    </svg>
+                                </a>
                                 <a href="{{ route('fletes.edit', $flete) }}" class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100" aria-label="Editar flete {{ $flete->id }}">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931ZM18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
@@ -87,6 +97,16 @@
                             </div>
                         </div>
                         <p class="mt-3 text-base font-bold text-slate-800">Total general: S/ {{ number_format((float) $flete->total_general, 2) }}</p>
+                        @if ($flete->pagos_count > 0)
+                            @php
+                                $totalPagado = (float) ($flete->total_pagado ?? 0);
+                                $falta = max((float) $flete->total_general - $totalPagado, 0);
+                            @endphp
+                            <p class="mt-1 text-sm text-slate-600">
+                                Pagado: S/ {{ number_format($totalPagado, 2) }}
+                                · Falta: S/ {{ number_format($falta, 2) }}
+                            </p>
+                        @endif
                     </article>
                 @endforeach
             </div>
@@ -112,6 +132,16 @@
                                     <td class="px-3 py-3 font-semibold">S/ {{ number_format((float) $flete->total_general, 2) }}</td>
                                     <td class="px-3 py-3">
                                         <div class="flex justify-end gap-2">
+                                            <a
+                                                href="{{ route('fletes.pagos', $flete) }}"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                                aria-label="Pagos del flete {{ $flete->id }}"
+                                            >
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 15h.01M11 15h2m5-10H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z" />
+                                                </svg>
+                                            </a>
                                             <a
                                                 href="{{ route('fletes.download', $flete) }}"
                                                 target="_blank"

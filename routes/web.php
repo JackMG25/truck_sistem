@@ -3,6 +3,7 @@
 use App\Http\Controllers\AgenciaController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FleteController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ServicioController;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('servicios', ServicioController::class)->except(['show']);
     Route::get('servicios/{servicio}/pagos', [ServicioController::class, 'pagos'])->name('servicios.pagos');
     Route::post('servicios/{servicio}/pagos', [ServicioController::class, 'storePago'])->name('servicios.pagos.store');
+    Route::resource('fletes', FleteController::class)->except(['show']);
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

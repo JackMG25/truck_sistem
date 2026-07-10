@@ -22,4 +22,9 @@ class Cliente extends Model
     {
         return $this->hasMany(Servicio::class, 'cliente_id');
     }
+
+    public function fletes()
+    {
+        return $this->hasMany(Flete::class, 'cliente_id');
+    }
 }

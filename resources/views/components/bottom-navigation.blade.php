@@ -8,6 +8,12 @@
             'icon' => 'M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9.75-4.5h9.75m-9.75 0a3 3 0 1 0 6 0m-9.75 0V10.5m0 4.25V15m12 3.75H15.75M15.75 15v4.5m0-4.5a3 3 0 0 0 3-3h2.25a3 3 0 0 1 3 3v4.5H15.75m-6-4.5h6m-6 0V10.5m6 4.5V10.5m0 0V9.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V10.5',
         ],
         [
+            'label' => 'Fletes',
+            'url' => url('/fletes'),
+            'active' => request()->is('fletes*'),
+            'icon' => 'M8.25 9.75h7.5M8.25 12.75h7.5m-7.5 3h7.5M3.75 6.75h16.5a.75.75 0 0 1 .75.75v10.5a.75.75 0 0 1-.75.75H3.75a.75.75 0 0 1-.75-.75V7.5a.75.75 0 0 1 .75-.75Z',
+        ],
+        [
             'label' => 'Dashboard',
             'url' => url('/dashboard'),
             'active' => request()->is('dashboard'),
@@ -30,7 +36,7 @@
 
 <nav class="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
     <div class="mx-auto w-full max-w-5xl px-3 sm:px-4 lg:px-6">
-        <div class="grid grid-cols-4 gap-1 rounded-2xl border border-slate-200/70 bg-slate-100/80 p-1.5 shadow-[0_-4px_24px_-4px_rgba(15,23,42,0.08)] sm:gap-2 sm:rounded-[1.75rem] sm:p-2">
+        <div class="grid grid-cols-5 gap-1 rounded-2xl border border-slate-200/70 bg-slate-100/80 p-1.5 shadow-[0_-4px_24px_-4px_rgba(15,23,42,0.08)] sm:gap-2 sm:rounded-[1.75rem] sm:p-2">
         @foreach ($items as $item)
             @php
                 $featured = $item['featured'] ?? false;

@@ -8,34 +8,34 @@ class FleteRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user() !== null;
     }
 
     protected function prepareForValidation(): void
     {
         $items = collect($this->input('items', []))
             ->map(function ($item) {
+                $descripcion = trim((string) ($item['descripcion'] ?? ''));
+
                 return [
                     'fecha' => $item['fecha'] ?? null,
-                    'descripcion' => trim((string) ($item['descripcion'] ?? '')),
+                    'descripcion' => $descripcion,
                     'servicio' => $item['servicio'] ?? 0,
                     'flete' => $item['flete'] ?? 0,
-                    'total' => $item['total'] ?? 0,
                 ];
             })
             ->filter(function ($item) {
-                return $item['fecha'] !== null
-                    || $item['descripcion'] !== ''
+                // Una fila solo con fecha no es un producto. El total lo calcula el servidor.
+                return $item['descripcion'] !== ''
                     || (float) $item['servicio'] > 0
-                    || (float) $item['flete'] > 0
-                    || (float) $item['total'] > 0;
+                    || (float) $item['flete'] > 0;
             })
             ->values()
             ->all();
 
         $this->merge([
             'cliente_id' => $this->filled('cliente_id') ? $this->input('cliente_id') : null,
-            'cliente_nombre_busqueda' => trim((string) $this->input('cliente_nombre_busqueda')),
+            'cliente_nombre_busqueda' => preg_replace('/\s+/u', ' ', trim((string) $this->input('cliente_nombre_busqueda'))) ?? '',
             'items' => $items,
         ]);
     }
@@ -44,14 +44,13 @@ class FleteRequest extends FormRequest
     {
         return [
             'cliente_id' => ['nullable', 'integer', 'exists:clientes,id'],
-            'cliente_nombre_busqueda' => ['required_without:cliente_id', 'nullable', 'string', 'max:150'],
+            'cliente_nombre_busqueda' => ['required_without:cliente_id', 'nullable', 'string', 'max:255'],
             'fecha' => ['required', 'date'],
-            'items' => ['required', 'array', 'min:1'],
+            'items' => ['required', 'array', 'min:1', 'max:80'],
             'items.*.fecha' => ['required', 'date'],
-            'items.*.descripcion' => ['nullable', 'string', 'max:500'],
-            'items.*.servicio' => ['required', 'numeric', 'min:0'],
-            'items.*.flete' => ['required', 'numeric', 'min:0'],
-            'items.*.total' => ['required', 'numeric', 'min:0'],
+            'items.*.descripcion' => ['nullable', 'string', 'max:255'],
+            'items.*.servicio' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'items.*.flete' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
         ];
     }
 
@@ -66,7 +65,6 @@ class FleteRequest extends FormRequest
             'items.*.descripcion' => 'descripción',
             'items.*.servicio' => 'servicio',
             'items.*.flete' => 'flete',
-            'items.*.total' => 'total',
         ];
     }
 }

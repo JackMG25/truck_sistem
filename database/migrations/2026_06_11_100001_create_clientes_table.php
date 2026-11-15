@@ -15,6 +15,8 @@ return new class extends Migration
             $table->string('direccion')->nullable();
             $table->text('observaciones')->nullable();
             $table->timestamps();
+
+            $table->index('nombre');
         });
     }
 

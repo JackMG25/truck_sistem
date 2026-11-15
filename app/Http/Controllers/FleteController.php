@@ -5,12 +5,16 @@ namespace App\Http\Controllers;
 use App\Http\Requests\FleteRequest;
 use App\Models\Cliente;
 use App\Models\Flete;
+use App\Models\FleteItem;
 use App\Models\FletePago;
+use App\Support\Money;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -18,37 +22,64 @@ class FleteController extends Controller
 {
     public function index(Request $request): View
     {
-        $search = trim((string) $request->string('q'));
+        $search = mb_substr(trim((string) $request->string('q')), 0, 100);
+        $desde = $this->parseFilterDate($request->query('desde'));
+        $hasta = $this->parseFilterDate($request->query('hasta'));
 
-        $fletes = Flete::query()
-            ->with(['cliente:id,nombre'])
-            ->withCount('items')
-            ->withCount('pagos')
-            ->withSum('pagos as total_pagado', 'monto')
+        // Si el usuario invierte el rango, se ordena para que la consulta no quede vacía.
+        if ($desde !== '' && $hasta !== '' && $desde > $hasta) {
+            [$desde, $hasta] = [$hasta, $desde];
+        }
+
+        $filtered = Flete::query()
             ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($subquery) use ($search) {
-                    if (ctype_digit($search)) {
-                        $subquery->where('id', $search);
+                $like = '%'.addcslashes($search, '%_\\').'%';
+                $parsedDate = $this->parseSearchDate($search);
 
-                        return;
-                    }
-
-                    $parsedDate = $this->parseSearchDate($search);
+                $query->where(function ($subquery) use ($search, $like, $parsedDate) {
+                    $subquery->whereHas('cliente', function ($q) use ($like) {
+                        $q->where('nombre', 'like', $like);
+                    });
 
                     if ($parsedDate !== null) {
                         $subquery->orWhereDate('fecha', $parsedDate);
                     }
 
-                    $subquery->orWhereHas('cliente', function ($q) use ($search) {
-                        $q->where('nombre', 'like', "%{$search}%");
-                    });
+                    if (ctype_digit($search)) {
+                        $subquery->orWhere('id', (int) $search);
+                    }
                 });
             })
+            ->when($desde !== '', fn ($query) => $query->where('fecha', '>=', $desde))
+            ->when($hasta !== '', fn ($query) => $query->where('fecha', '<=', $hasta));
+
+        $fletes = (clone $filtered)
+            ->select(['id', 'cliente_id', 'fecha', 'total_general'])
+            ->with(['cliente:id,nombre'])
+            ->withCount('items')
+            ->withCount('pagos')
+            ->withSum('pagos as total_pagado', 'monto')
             ->latest('id')
             ->paginate(10)
+            ->onEachSide(1)
             ->withQueryString();
 
-        return view('fletes.index', compact('fletes', 'search'));
+        // La página muestra 10 filas; estos montos son de todo el resultado filtrado.
+        $totalGeneralCents = Money::cents((clone $filtered)->sum('total_general'));
+        $pagadoCents = Money::cents(
+            FletePago::query()
+                ->whereIn('flete_id', (clone $filtered)->select('id'))
+                ->sum('monto')
+        );
+
+        $totales = [
+            'cantidad' => $fletes->total(),
+            'total_general' => $totalGeneralCents / 100,
+            'pagado' => $pagadoCents / 100,
+            'falta' => max($totalGeneralCents - $pagadoCents, 0) / 100,
+        ];
+
+        return view('fletes.index', compact('fletes', 'search', 'desde', 'hasta', 'totales'));
     }
 
     public function create(): View
@@ -62,13 +93,16 @@ class FleteController extends Controller
     public function store(FleteRequest $request): RedirectResponse
     {
         $data = $request->validated();
-        $items = $data['items'];
-        unset($data['items'], $data['cliente_nombre_busqueda']);
 
-        $data['cliente_id'] = $this->resolveClienteId($request->validated());
+        DB::transaction(function () use ($data) {
+            $flete = Flete::query()->create([
+                'cliente_id' => $this->resolveClienteId($data),
+                'fecha' => $data['fecha'],
+                'total_general' => 0,
+            ]);
 
-        $flete = Flete::create($data);
-        $this->syncItems($flete, $items);
+            $flete->replaceItems($data['items']);
+        });
 
         return redirect()
             ->route('fletes.index')
@@ -88,25 +122,24 @@ class FleteController extends Controller
     public function update(FleteRequest $request, Flete $flete): RedirectResponse
     {
         $data = $request->validated();
-        $items = $data['items'];
-        unset($data['items'], $data['cliente_nombre_busqueda']);
 
-        $nuevoTotal = round(collect($items)->sum(fn ($item) => (float) $item['total']), 2);
-        $totalPagado = round($flete->totalPagado(), 2);
+        DB::transaction(function () use ($data, $flete) {
+            $locked = Flete::query()->whereKey($flete->id)->lockForUpdate()->firstOrFail();
+            $nuevoTotal = FleteItem::totalCents($data['items']);
 
-        if ($nuevoTotal < $totalPagado) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->withErrors([
-                    'items' => 'El total general (S/ '.number_format($nuevoTotal, 2).') no puede ser menor a lo ya pagado (S/ '.number_format($totalPagado, 2).'). Elimina o corrige pagos primero.',
+            if ($nuevoTotal < $locked->totalPagadoCents()) {
+                throw ValidationException::withMessages([
+                    'items' => 'El total general (S/ '.Money::format($nuevoTotal).') no puede ser menor a lo ya pagado (S/ '.Money::format($locked->totalPagadoCents()).'). Elimina o corrige pagos primero.',
                 ]);
-        }
+            }
 
-        $data['cliente_id'] = $this->resolveClienteId($request->validated());
+            $locked->update([
+                'cliente_id' => $this->resolveClienteId($data),
+                'fecha' => $data['fecha'],
+            ]);
 
-        $flete->update($data);
-        $this->syncItems($flete, $items);
+            $locked->replaceItems($data['items']);
+        });
 
         return redirect()
             ->route('fletes.index')
@@ -160,40 +193,45 @@ class FleteController extends Controller
 
     public function storePago(Request $request, Flete $flete): RedirectResponse
     {
-        $faltaPagar = round($flete->faltaPagar(), 2);
+        DB::transaction(function () use ($request, $flete) {
+            $locked = Flete::query()->whereKey($flete->id)->lockForUpdate()->firstOrFail();
+            $faltaCents = max(Money::cents($locked->total_general) - $locked->totalPagadoCents(), 0);
 
-        if ($faltaPagar <= 0) {
-            return redirect()
-                ->route('fletes.pagos', $flete)
-                ->withErrors(['monto' => 'Este flete ya está pagado completamente.']);
-        }
+            if ($faltaCents <= 0) {
+                throw ValidationException::withMessages([
+                    'monto' => 'Este flete ya está pagado completamente.',
+                ]);
+            }
 
-        $request->merge([
-            'descripcion' => trim((string) $request->input('descripcion')),
-        ]);
+            $request->merge([
+                'descripcion' => trim((string) $request->input('descripcion')),
+            ]);
 
-        $data = $request->validate([
-            'descripcion' => ['required', 'string', 'max:500'],
-            'monto' => ['required', 'numeric', 'min:0.01', 'max:'.$faltaPagar],
-        ], [
-            'descripcion.required' => 'La descripción es obligatoria.',
-            'monto.max' => 'El monto no puede exceder lo que falta por pagar (S/ '.number_format($faltaPagar, 2).').',
-            'monto.min' => 'El monto debe ser mayor a 0.',
-        ], [
-            'descripcion' => 'descripción',
-            'monto' => 'monto',
-        ]);
+            $validated = $request->validate([
+                'descripcion' => ['required', 'string', 'max:255'],
+                'monto' => ['required', 'numeric', 'min:0.01', 'max:'.Money::format($faltaCents)],
+            ], [
+                'descripcion.required' => 'La descripción es obligatoria.',
+                'monto.max' => 'El monto no puede exceder lo que falta por pagar (S/ '.Money::format($faltaCents).').',
+                'monto.min' => 'El monto debe ser mayor a 0.',
+            ], [
+                'descripcion' => 'descripción',
+                'monto' => 'monto',
+            ]);
 
-        $data['monto'] = round((float) $data['monto'], 2);
+            $montoCents = Money::cents($validated['monto']);
 
-        if ($data['monto'] > $faltaPagar) {
-            return redirect()
-                ->route('fletes.pagos', $flete)
-                ->withInput()
-                ->withErrors(['monto' => 'El monto no puede exceder lo que falta por pagar (S/ '.number_format($faltaPagar, 2).').']);
-        }
+            if ($montoCents > $faltaCents) {
+                throw ValidationException::withMessages([
+                    'monto' => 'El monto no puede exceder lo que falta por pagar (S/ '.Money::format($faltaCents).').',
+                ]);
+            }
 
-        $flete->pagos()->create($data);
+            $locked->pagos()->create([
+                'descripcion' => $validated['descripcion'],
+                'monto' => Money::format($montoCents),
+            ]);
+        });
 
         return redirect()
             ->route('fletes.pagos', $flete)
@@ -202,9 +240,11 @@ class FleteController extends Controller
 
     public function destroyPago(Flete $flete, FletePago $pago): RedirectResponse
     {
-        abort_unless($pago->flete_id === $flete->id, 404);
+        $owned = $flete->pagos()->whereKey($pago->id)->first();
 
-        $pago->delete();
+        abort_if($owned === null, 404);
+
+        $owned->delete();
 
         return redirect()
             ->route('fletes.pagos', $flete)
@@ -226,30 +266,37 @@ class FleteController extends Controller
 
         $nombre = trim((string) ($data['cliente_nombre_busqueda'] ?? ''));
 
-        return Cliente::firstOrCreate(['nombre' => $nombre])->id;
+        return Cliente::query()->firstOrCreate(['nombre' => $nombre])->id;
     }
 
-    private function syncItems(Flete $flete, array $items): void
+    private function parseFilterDate(mixed $value): string
     {
-        $flete->items()->delete();
+        $value = trim((string) $value);
 
-        foreach ($items as $item) {
-            $flete->items()->create($item);
+        if ($value === '') {
+            return '';
         }
 
-        // Total general guardado en fletes = suma de la columna total de cada ítem.
-        $flete->update(['total_general' => $flete->items()->sum('total')]);
+        try {
+            $date = Carbon::createFromFormat('!Y-m-d', $value);
+
+            if ($date !== false && $date->format('Y-m-d') === $value) {
+                return $value;
+            }
+        } catch (\Throwable) {
+            return '';
+        }
+
+        return '';
     }
 
     private function parseSearchDate(string $search): ?string
     {
-        $formats = ['d/m/Y', 'd-m-Y', 'Y-m-d', 'd/m/y', 'd-m-y'];
-
-        foreach ($formats as $format) {
+        foreach (['d/m/Y', 'd-m-Y', 'Y-m-d', 'd/m/y', 'd-m-y'] as $format) {
             try {
-                $date = Carbon::createFromFormat($format, $search);
+                $date = Carbon::createFromFormat('!'.$format, $search);
 
-                if ($date !== false) {
+                if ($date !== false && $date->format($format) === $search) {
                     return $date->format('Y-m-d');
                 }
             } catch (\Throwable) {
@@ -257,10 +304,6 @@ class FleteController extends Controller
             }
         }
 
-        try {
-            return Carbon::parse($search)->format('Y-m-d');
-        } catch (\Throwable) {
-            return null;
-        }
+        return null;
     }
 }

@@ -11,13 +11,21 @@
 
     $oldItems = old('items');
     if (is_array($oldItems) && count($oldItems) > 0) {
-        $itemsData = collect($oldItems)->map(fn ($item) => [
-            'fecha' => $item['fecha'] ?? '',
-            'descripcion' => $item['descripcion'] ?? '',
-            'servicio' => $item['servicio'] ?? '',
-            'flete' => $item['flete'] ?? '',
-            'total' => $item['total'] ?? '',
-        ])->values()->all();
+        $itemsData = collect($oldItems)->map(function ($item) {
+            $servicio = $item['servicio'] ?? '';
+            $fleteMonto = $item['flete'] ?? '';
+            $tieneMonto = is_numeric($servicio) || is_numeric($fleteMonto);
+
+            return [
+                'fecha' => $item['fecha'] ?? '',
+                'descripcion' => $item['descripcion'] ?? '',
+                'servicio' => $servicio,
+                'flete' => $fleteMonto,
+                'total' => $tieneMonto
+                    ? number_format((float) $servicio + (float) $fleteMonto, 2, '.', '')
+                    : '',
+            ];
+        })->values()->all();
     } elseif ($flete->relationLoaded('items') && $flete->items->isNotEmpty()) {
         $itemsData = $flete->items->map(fn ($item) => [
             'fecha' => optional($item->fecha)->format('Y-m-d') ?? '',
@@ -37,6 +45,19 @@
     }
 
     $totalFletePreview = collect($itemsData)->sum(fn ($item) => (float) ($item['total'] ?: 0));
+
+    // dd/mm/aa cabe junto al ícono. El input nativo sigue guardando Y-m-d.
+    $fechaCorta = function ($value) {
+        if (! $value) {
+            return '';
+        }
+
+        try {
+            return \Illuminate\Support\Carbon::parse($value)->format('d/m/y');
+        } catch (\Throwable) {
+            return '';
+        }
+    };
 @endphp
 
 <div class="flete-form space-y-5">
@@ -101,6 +122,7 @@
             <table class="flete-excel-table">
                 <thead>
                     <tr>
+                        <th class="col-drag"><span class="flete-sr">Orden</span></th>
                         <th class="col-fecha">F.</th>
                         <th class="col-desc">Descripción</th>
                         <th class="col-num">Servicio</th>
@@ -112,8 +134,26 @@
                 <tbody id="items-tbody">
                     @foreach ($itemsData as $index => $item)
                         <tr class="item-row" data-index="{{ $index }}">
-                            <td>
-                                <input type="date" name="items[{{ $index }}][fecha]" value="{{ $item['fecha'] }}" class="js-item-input flete-cell-input flete-cell-date">
+                            <td class="col-drag">
+                                <button type="button" class="js-drag-handle flete-drag-btn" aria-label="Arrastrar fila {{ $index + 1 }}" title="Arrastra para subir o bajar">
+                                    <svg viewBox="0 0 16 16" class="flete-drag-icon" aria-hidden="true">
+                                        <circle cx="5" cy="3.5" r="1.15" />
+                                        <circle cx="11" cy="3.5" r="1.15" />
+                                        <circle cx="5" cy="8" r="1.15" />
+                                        <circle cx="11" cy="8" r="1.15" />
+                                        <circle cx="5" cy="12.5" r="1.15" />
+                                        <circle cx="11" cy="12.5" r="1.15" />
+                                    </svg>
+                                </button>
+                            </td>
+                            <td class="col-fecha">
+                                <div class="flete-date">
+                                    <span class="flete-date-text {{ $fechaCorta($item['fecha']) === '' ? 'is-empty' : '' }}">{{ $fechaCorta($item['fecha']) !== '' ? $fechaCorta($item['fecha']) : 'dd/mm/aa' }}</span>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flete-date-icon" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 3v2m8-2v2M4.5 9h15M6 5.5h12a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 18 19.5H6A1.5 1.5 0 0 1 4.5 18V7A1.5 1.5 0 0 1 6 5.5Z" />
+                                    </svg>
+                                    <input type="date" name="items[{{ $index }}][fecha]" value="{{ $item['fecha'] }}" aria-label="Fecha del producto" class="js-item-input js-item-fecha flete-date-native">
+                                </div>
                                 @error("items.{$index}.fecha")
                                     <p class="px-1 text-xs text-rose-500">{{ $message }}</p>
                                 @enderror
@@ -128,7 +168,7 @@
                                 <input type="number" min="0" step="0.01" inputmode="decimal" name="items[{{ $index }}][flete]" value="{{ $item['flete'] }}" placeholder="0.00" class="js-item-flete flete-cell-input flete-cell-num">
                             </td>
                             <td>
-                                <input type="number" min="0" step="0.01" inputmode="decimal" name="items[{{ $index }}][total]" value="{{ $item['total'] }}" placeholder="0.00" class="js-item-total flete-cell-input flete-cell-num">
+                                <input type="number" min="0" step="0.01" inputmode="decimal" value="{{ $item['total'] }}" placeholder="0.00" readonly tabindex="-1" title="Se calcula con servicio + flete" class="js-item-total flete-cell-input flete-cell-num">
                             </td>
                             <td class="col-del">
                                 <button type="button" class="js-remove-row flete-remove-btn" title="Eliminar fila" aria-label="Eliminar fila">
@@ -211,8 +251,9 @@
 
     .flete-form .flete-excel-table {
         width: 100%;
-        min-width: 36rem;
-        border-collapse: collapse;
+        min-width: 40rem;
+        border-collapse: separate;
+        border-spacing: 0;
         table-layout: fixed;
         font-size: 1rem;
         color: #334155;
@@ -220,10 +261,20 @@
 
     .flete-form .flete-excel-table th,
     .flete-form .flete-excel-table td {
-        border: 1px solid #94a3b8;
+        border: 0;
+        border-right: 1px solid #94a3b8;
+        border-bottom: 1px solid #94a3b8;
         padding: 0;
         margin: 0;
         vertical-align: middle;
+    }
+
+    .flete-form .flete-excel-table tr > :last-child {
+        border-right: 0;
+    }
+
+    .flete-form .flete-excel-table tbody tr:last-child > * {
+        border-bottom: 0;
     }
 
     .flete-form .flete-excel-table th {
@@ -238,10 +289,22 @@
         white-space: nowrap;
     }
 
-    .flete-form .flete-excel-table .col-fecha { width: 4.25rem; }
+    .flete-form .flete-excel-table .col-drag {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        width: 1.75rem;
+        background: #fff;
+    }
+
+    .flete-form .flete-excel-table th.col-drag {
+        z-index: 2;
+        background: #e2e8f0;
+    }
+    .flete-form .flete-excel-table .col-fecha { width: 6.6rem; }
     .flete-form .flete-excel-table .col-desc { width: auto; }
     .flete-form .flete-excel-table .col-num { width: 5.25rem; }
-    .flete-form .flete-excel-table .col-del { width: 2.75rem; }
+    .flete-form .flete-excel-table .col-del { width: 2.5rem; }
 
     .flete-form .flete-cell-input {
         display: block;
@@ -267,36 +330,93 @@
         font-variant-numeric: tabular-nums;
     }
 
-    .flete-form .flete-excel-table td:first-child {
+    .flete-form .flete-sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
         overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
     }
 
-    /* Fecha compacta: texto pequeño, icono de calendario grande */
-    .flete-form .flete-cell-date {
+    .flete-form .flete-drag-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
         min-height: 2.875rem;
-        font-size: 0.625rem;
-        line-height: 1.1;
-        letter-spacing: -0.03em;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        border: 0;
+        background: transparent;
+        color: #94a3b8;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+    }
+
+    .flete-form .flete-drag-btn:active {
+        cursor: grabbing;
+        color: #0284c7;
+    }
+
+    .flete-form .flete-drag-icon {
+        width: 0.9rem;
+        height: 0.9rem;
+    }
+
+    .flete-form .flete-drag-icon circle {
+        fill: currentColor;
+    }
+
+    .flete-form .item-row.is-dragging {
+        background: #e0f2fe;
+        opacity: 0.72;
+    }
+
+    /* Texto e ícono van lado a lado. El input transparente, encima, abre el calendario nativo. */
+    .flete-form .flete-date {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.15rem;
+        min-height: 2.875rem;
+        padding: 0 0.3rem 0 0.4rem;
+    }
+
+    .flete-form .flete-date-text {
+        font-size: 0.8125rem;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.01em;
         white-space: nowrap;
     }
 
-    .flete-form .flete-cell-date::-webkit-calendar-picker-indicator {
-        width: 1.275rem;
-        height: 1.275rem;
-        margin: 0;
-        padding: 0;
-        cursor: pointer;
-        opacity: 1;
-        transform: scale(1.25);
-        transform-origin: center;
+    .flete-form .flete-date-text.is-empty {
+        color: #94a3b8;
     }
 
-    .flete-form .flete-cell-date::-moz-calendar-picker-indicator {
-        width: 1.375rem;
-        height: 1.375rem;
+    .flete-form .flete-date-icon {
+        width: 1rem;
+        height: 1rem;
+        flex: none;
+        color: #0284c7;
+    }
+
+    .flete-form .flete-date-native {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        opacity: 0;
         cursor: pointer;
+    }
+
+    .flete-form .flete-date-native:focus {
+        outline: 2px solid #0ea5e9;
+        outline-offset: -2px;
     }
 
     .flete-form .flete-remove-btn {
@@ -400,6 +520,25 @@
             totalInput.value = total.toFixed(2);
         }
 
+        function formatCompactDate(value) {
+            if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                return '';
+            }
+
+            const [year, month, day] = value.split('-');
+
+            return `${day}/${month}/${year.slice(-2)}`;
+        }
+
+        function syncDateLabel(input) {
+            const text = input.closest('.flete-date')?.querySelector('.flete-date-text');
+            if (!text) return;
+
+            const label = formatCompactDate(input.value);
+            text.textContent = label || 'dd/mm/aa';
+            text.classList.toggle('is-empty', label === '');
+        }
+
         function reindexRows() {
             tbody.querySelectorAll('.item-row').forEach((row, index) => {
                 row.dataset.index = String(index);
@@ -417,6 +556,11 @@
             const fleteInput = row.querySelector('.js-item-flete');
             const totalInput = row.querySelector('.js-item-total');
             const removeBtn = row.querySelector('.js-remove-row');
+            const dateInput = row.querySelector('.js-item-fecha');
+
+            dateInput?.addEventListener('change', function () {
+                syncDateLabel(dateInput);
+            });
 
             servicioInput?.addEventListener('input', function () {
                 updateRowTotal(row);
@@ -436,6 +580,7 @@
                     row.querySelectorAll('input').forEach((input) => {
                         if (input.type === 'date') {
                             input.value = fechaFleteInput?.value || '';
+                            syncDateLabel(input);
                         } else {
                             input.value = '';
                         }
@@ -452,12 +597,31 @@
 
         function createRow(index) {
             const fecha = fechaFleteInput?.value || '';
+            const fechaVisible = formatCompactDate(fecha) || 'dd/mm/aa';
             const tr = document.createElement('tr');
             tr.className = 'item-row';
             tr.dataset.index = String(index);
             tr.innerHTML = `
-                <td>
-                    <input type="date" name="items[${index}][fecha]" value="${fecha}" class="js-item-input flete-cell-input flete-cell-date">
+                <td class="col-drag">
+                    <button type="button" class="js-drag-handle flete-drag-btn" aria-label="Arrastrar fila" title="Arrastra para subir o bajar">
+                        <svg viewBox="0 0 16 16" class="flete-drag-icon" aria-hidden="true">
+                            <circle cx="5" cy="3.5" r="1.15"></circle>
+                            <circle cx="11" cy="3.5" r="1.15"></circle>
+                            <circle cx="5" cy="8" r="1.15"></circle>
+                            <circle cx="11" cy="8" r="1.15"></circle>
+                            <circle cx="5" cy="12.5" r="1.15"></circle>
+                            <circle cx="11" cy="12.5" r="1.15"></circle>
+                        </svg>
+                    </button>
+                </td>
+                <td class="col-fecha">
+                    <div class="flete-date">
+                        <span class="flete-date-text${fecha ? '' : ' is-empty'}">${fechaVisible}</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flete-date-icon" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 3v2m8-2v2M4.5 9h15M6 5.5h12a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 18 19.5H6A1.5 1.5 0 0 1 4.5 18V7A1.5 1.5 0 0 1 6 5.5Z"></path>
+                        </svg>
+                        <input type="date" name="items[${index}][fecha]" value="${fecha}" aria-label="Fecha del producto" class="js-item-input js-item-fecha flete-date-native">
+                    </div>
                 </td>
                 <td>
                     <input type="text" name="items[${index}][descripcion]" placeholder="Descripción" class="js-item-input flete-cell-input">
@@ -469,7 +633,7 @@
                     <input type="number" min="0" step="0.01" inputmode="decimal" name="items[${index}][flete]" placeholder="0.00" class="js-item-flete flete-cell-input flete-cell-num">
                 </td>
                 <td>
-                    <input type="number" min="0" step="0.01" inputmode="decimal" name="items[${index}][total]" placeholder="0.00" class="js-item-total flete-cell-input flete-cell-num">
+                    <input type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" readonly tabindex="-1" title="Se calcula con servicio + flete" class="js-item-total flete-cell-input flete-cell-num">
                 </td>
                 <td class="col-del">
                     <button type="button" class="js-remove-row flete-remove-btn" title="Eliminar fila" aria-label="Eliminar fila">
@@ -491,6 +655,71 @@
 
         tbody.querySelectorAll('.item-row').forEach(bindRowEvents);
         updateTotalFlete();
+
+        // Pointer Events: arrastrar con mouse o dedo. La API drag-and-drop nativa no responde bien al tacto.
+        let dragState = null;
+
+        function moveDraggedRow(clientY) {
+            const rows = Array.from(tbody.querySelectorAll('.item-row')).filter((row) => row !== dragState.row);
+            let target = null;
+
+            for (const row of rows) {
+                const rect = row.getBoundingClientRect();
+                if (clientY < rect.top + rect.height / 2) {
+                    target = row;
+                    break;
+                }
+            }
+
+            if (target) {
+                if (dragState.row.nextElementSibling !== target) {
+                    target.before(dragState.row);
+                }
+                return;
+            }
+
+            const last = rows[rows.length - 1];
+            if (last && last.nextElementSibling !== dragState.row) {
+                last.after(dragState.row);
+            }
+        }
+
+        tbody.addEventListener('pointerdown', function (event) {
+            const handle = event.target.closest('.js-drag-handle');
+            if (!handle || tbody.querySelectorAll('.item-row').length < 2) return;
+
+            const row = handle.closest('.item-row');
+            if (!row) return;
+
+            event.preventDefault();
+            try {
+                handle.setPointerCapture(event.pointerId);
+            } catch (error) {
+                // Si el navegador no acepta la captura, el arrastre sigue por los eventos del tbody.
+            }
+            row.classList.add('is-dragging');
+            dragState = { row, pointerId: event.pointerId, moved: false };
+        });
+
+        tbody.addEventListener('pointermove', function (event) {
+            if (!dragState || event.pointerId !== dragState.pointerId) return;
+
+            dragState.moved = true;
+            moveDraggedRow(event.clientY);
+        });
+
+        function finishDrag(event) {
+            if (!dragState || event.pointerId !== dragState.pointerId) return;
+
+            dragState.row.classList.remove('is-dragging');
+            if (dragState.moved) {
+                reindexRows();
+            }
+            dragState = null;
+        }
+
+        tbody.addEventListener('pointerup', finishDrag);
+        tbody.addEventListener('pointercancel', finishDrag);
 
         // Evita que la rueda del mouse cambie los montos cuando el input tiene foco
         tbody.addEventListener('wheel', function (event) {

@@ -30,7 +30,7 @@
                                 Gestiona tus cargas y operaciones desde un solo lugar.
                             </h1>
                             <p class="max-w-md text-sm text-slate-300">
-                                Panel profesional para administrar clientes, agencias y servicios de forma rapida y ordenada.
+                                Panel para registrar fletes, productos y abonos por cliente.
                             </p>
                         </div>
                         <p class="text-xs text-slate-400">

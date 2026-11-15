@@ -2,21 +2,16 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
-     * Seed the application's database.
+     * No siembra datos de demostración.
+     * El seeder anterior creaba usuarios con contraseña conocida y filas del módulo de servicios.
      */
     public function run(): void
     {
-        $this->call([
-            DemoDataSeeder::class,
-        ]);
+        //
     }
 }

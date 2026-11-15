@@ -2,15 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Support\Money;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Flete extends Model
 {
-    use HasFactory;
-
     protected $table = 'fletes';
 
     protected $fillable = [
@@ -39,18 +37,48 @@ class Flete extends Model
         return $this->hasMany(FletePago::class, 'flete_id');
     }
 
-    public function totalPagado(): float
+    public function totalPagadoCents(): int
     {
         if ($this->relationLoaded('pagos')) {
-            return (float) $this->pagos->sum('monto');
+            return (int) $this->pagos->sum(fn (FletePago $pago) => Money::cents($pago->monto));
         }
 
-        return (float) $this->pagos()->sum('monto');
+        return Money::cents($this->pagos()->sum('monto'));
+    }
+
+    public function totalPagado(): float
+    {
+        return $this->totalPagadoCents() / 100;
     }
 
     public function faltaPagar(): float
     {
-        return max((float) $this->total_general - $this->totalPagado(), 0);
+        return max(Money::cents($this->total_general) - $this->totalPagadoCents(), 0) / 100;
+    }
+
+    /**
+     * Reemplaza el detalle y guarda el total general como suma de cada fila.
+     * El total de la fila es servicio + flete; no se acepta el total enviado por el navegador.
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     */
+    public function replaceItems(array $items): void
+    {
+        $this->items()->delete();
+
+        $rows = [];
+
+        foreach ($items as $item) {
+            $rows[] = FleteItem::row($this->id, $item);
+        }
+
+        if ($rows !== []) {
+            FleteItem::query()->insert($rows);
+        }
+
+        $this->update([
+            'total_general' => Money::format(FleteItem::totalCents($items)),
+        ]);
     }
 
     /** Carga solo lo necesario para generar el PDF del registro. */

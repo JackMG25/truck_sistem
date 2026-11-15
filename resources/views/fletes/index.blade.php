@@ -14,6 +14,12 @@
                 </a>
 
                 <form id="fletes-search-form" method="GET" action="{{ route('fletes.index') }}" class="flex w-full items-center gap-2">
+                    @if ($desde !== '')
+                        <input type="hidden" name="desde" value="{{ $desde }}">
+                    @endif
+                    @if ($hasta !== '')
+                        <input type="hidden" name="hasta" value="{{ $hasta }}">
+                    @endif
                     <div class="relative flex-1">
                         <input
                             type="search"
@@ -29,14 +35,39 @@
                             </svg>
                         </div>
                     </div>
+                    <button
+                        type="button"
+                        id="open-date-filter"
+                        class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border {{ ($desde !== '' || $hasta !== '') ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-slate-200 bg-white text-slate-600' }} hover:bg-sky-50 hover:text-sky-700"
+                        aria-label="Filtrar por fecha"
+                        aria-haspopup="dialog"
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 5h18l-7 8.5V19l-4-2v-3.5L3 5Z" />
+                        </svg>
+                    </button>
                     <button type="submit" class="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-800 px-4 py-3 text-base font-bold text-white">
                         Buscar
                     </button>
                 </form>
 
-                @if ($search !== '')
+                @if ($search !== '' || $desde !== '' || $hasta !== '')
                     <p class="text-sm text-slate-500">
-                        Resultados para: <span class="font-semibold text-slate-700">{{ $search }}</span>
+                        @if ($search !== '')
+                            Resultados para: <span class="font-semibold text-slate-700">{{ $search }}</span>
+                        @endif
+                        @if ($desde !== '' || $hasta !== '')
+                            @if ($search !== '') · @endif
+                            <span class="font-semibold text-slate-700">
+                                @if ($desde !== '' && $hasta !== '')
+                                    {{ \Carbon\Carbon::parse($desde)->format('d/m/Y') }} – {{ \Carbon\Carbon::parse($hasta)->format('d/m/Y') }}
+                                @elseif ($desde !== '')
+                                    Desde {{ \Carbon\Carbon::parse($desde)->format('d/m/Y') }}
+                                @else
+                                    Hasta {{ \Carbon\Carbon::parse($hasta)->format('d/m/Y') }}
+                                @endif
+                            </span>
+                        @endif
                         · <a href="{{ route('fletes.index') }}" class="font-semibold text-sky-600">Limpiar</a>
                     </p>
                 @endif
@@ -176,14 +207,93 @@
                 </div>
             </div>
 
-            <div>
-                {{ $fletes->links() }}
+            <div class="space-y-3">
+                {{ $fletes->links('fletes.pagination') }}
+
+                <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-sky-100/70">
+                    <p class="border-b border-slate-100 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                        {{ ($search !== '' || $desde !== '' || $hasta !== '') ? 'Totalizados de la búsqueda' : 'Totalizados' }}
+                    </p>
+                    <dl class="grid grid-cols-2 sm:grid-cols-4">
+                        <div class="border-b border-r border-slate-100 px-3 py-2 sm:border-b-0">
+                            <dt class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Fletes</dt>
+                            <dd class="text-sm font-bold text-slate-800">{{ number_format($totales['cantidad']) }}</dd>
+                        </div>
+                        <div class="border-b border-slate-100 px-3 py-2 sm:border-b-0 sm:border-r">
+                            <dt class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Total</dt>
+                            <dd class="text-sm font-bold text-slate-800">S/ {{ number_format($totales['total_general'], 2) }}</dd>
+                        </div>
+                        <div class="border-r border-slate-100 px-3 py-2">
+                            <dt class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Pagado</dt>
+                            <dd class="text-sm font-bold text-emerald-700">S/ {{ number_format($totales['pagado'], 2) }}</dd>
+                        </div>
+                        <div class="px-3 py-2">
+                            <dt class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Falta</dt>
+                            <dd class="text-sm font-bold text-amber-700">S/ {{ number_format($totales['falta'], 2) }}</dd>
+                        </div>
+                    </dl>
+                </div>
             </div>
         @endif
     </section>
 
+    <dialog id="date-filter-modal" class="w-[min(100%-2rem,24rem)] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl" aria-labelledby="date-filter-title">
+        <div>
+            <div class="flex items-center justify-between gap-3">
+                <h2 id="date-filter-title" class="text-base font-bold text-slate-800">Filtrar por fecha</h2>
+                <button type="button" data-close-date-filter class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6 6 18" />
+                    </svg>
+                </button>
+            </div>
+
+            <form method="GET" action="{{ route('fletes.index') }}" class="mt-4 space-y-3">
+                @if ($search !== '')
+                    <input type="hidden" name="q" value="{{ $search }}">
+                @endif
+                <label class="block">
+                    <span class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Desde</span>
+                    <input type="date" name="desde" value="{{ $desde }}" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-base text-slate-700 focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-200">
+                </label>
+                <label class="block">
+                    <span class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Hasta</span>
+                    <input type="date" name="hasta" value="{{ $hasta }}" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-base text-slate-700 focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-200">
+                </label>
+                <div class="flex items-center justify-between gap-2 pt-1">
+                    <a href="{{ route('fletes.index', $search !== '' ? ['q' => $search] : []) }}" class="text-sm font-semibold text-slate-500">Quitar fechas</a>
+                    <button type="submit" class="rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-bold text-white">Aplicar</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+    <style>
+        #date-filter-modal::backdrop { background: rgba(15, 23, 42, 0.45); }
+    </style>
+
     <script>
         (function () {
+            const dateModal = document.getElementById('date-filter-modal');
+            const openDateFilter = document.getElementById('open-date-filter');
+
+            openDateFilter.addEventListener('click', function () {
+                dateModal.showModal();
+                const firstDate = dateModal.querySelector('input[name="desde"]');
+                if (firstDate) {
+                    firstDate.focus();
+                }
+            });
+            dateModal.addEventListener('click', function (event) {
+                if (event.target === dateModal) {
+                    dateModal.close();
+                }
+            });
+            dateModal.querySelectorAll('[data-close-date-filter]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    dateModal.close();
+                });
+            });
+
             document.querySelectorAll('.delete-form').forEach(function (form) {
                 form.addEventListener('submit', function (e) {
                     e.preventDefault();

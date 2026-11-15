@@ -2,28 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Cliente extends Model
 {
-    use HasFactory;
-
     protected $table = 'clientes';
 
     protected $fillable = [
         'nombre',
-        'telefono',
-        'direccion',
-        'observaciones',
     ];
 
-    public function servicios()
-    {
-        return $this->hasMany(Servicio::class, 'cliente_id');
-    }
-
-    public function fletes()
+    public function fletes(): HasMany
     {
         return $this->hasMany(Flete::class, 'cliente_id');
     }

@@ -20,7 +20,7 @@ El navegador muestra el total, pero el servidor lo vuelve a calcular. Un total e
 
 ## Acceso
 
-El registro público está cerrado. Entran solo los usuarios que ya existen. Después del login se abre el listado de fletes.
+El registro público está cerrado. Entran solo los usuarios que ya existen. Después del login se abre el listado de fletes. En el menú inferior, el botón junto a Fletes abre el perfil para cambiar el correo, la clave y cerrar sesión.
 
 ## Puesta en marcha
 

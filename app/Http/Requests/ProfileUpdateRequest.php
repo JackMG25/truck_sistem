@@ -28,4 +28,17 @@ class ProfileUpdateRequest extends FormRequest
             ],
         ];
     }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'email.required' => 'Escribe el correo.',
+            'email.email' => 'El correo no es válido.',
+            'email.unique' => 'Ese correo ya está en uso.',
+            'name.required' => 'Falta el nombre de la cuenta.',
+        ];
+    }
 }
